@@ -79,11 +79,11 @@ fun WelcomeScreen(navController: NavController) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(onClick = { navController.navigate(Screen.Home.route) }) {
+                    TextButton(onClick = { navController.navigate(Screen.Login.route) }) {
                         Text(text = "Masuk", color = Color.White)
                     }
                     Button(
-                        onClick = { navController.navigate(Screen.Home.route) },
+                        onClick = { navController.navigate(Screen.Login.route) },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF9A825))
                     ) {
                         Text(text = "Mulai Sekarang", color = Color.White)
@@ -93,7 +93,7 @@ fun WelcomeScreen(navController: NavController) {
                 Box(modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)) {
-                    TextButton(onClick = { navController.navigate(Screen.Home.route) }, modifier = Modifier.align(Alignment.CenterEnd)) {
+                    TextButton(onClick = { navController.navigate(Screen.Login.route) }, modifier = Modifier.align(Alignment.CenterEnd)) {
                         Text(text = "Lewati", color = Color.White)
                     }
                 }
