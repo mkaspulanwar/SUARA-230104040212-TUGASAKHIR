@@ -2,10 +2,10 @@
 package id.antasari.suara_230104040212_tugasakhir.ui.screen
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Article
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.QuestionAnswer
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -51,8 +51,8 @@ fun BottomNavigationBar(navController: NavController) {
 }
 
 sealed class NavigationItem(val route: String, val icon: ImageVector, val title: String) {
-    object Home : NavigationItem(Screen.Home.route, Icons.Default.Home, "Home")
-    object Stream : NavigationItem(Screen.Stream.route, Icons.Default.List, "Stream")
-    object Aspiration : NavigationItem(Screen.Aspiration.route, Icons.Default.Create, "Aspirasi")
-    object Settings : NavigationItem(Screen.Settings.route, Icons.Default.Settings, "Settings")
+    object Home : NavigationItem(Screen.Home.route, Icons.Outlined.Home, "Home")
+    object Stream : NavigationItem(Screen.Stream.route, Icons.Outlined.Article, "Stream")
+    object Aspiration : NavigationItem(Screen.Aspiration.route, Icons.Outlined.QuestionAnswer, "Aspirasi")
+    object Settings : NavigationItem(Screen.Settings.route, Icons.Outlined.Settings, "Settings")
 }
