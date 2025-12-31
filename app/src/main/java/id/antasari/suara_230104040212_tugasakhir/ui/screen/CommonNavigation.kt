@@ -9,13 +9,16 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import id.antasari.suara_230104040212_tugasakhir.navigation.Screen
+import id.antasari.suara_230104040212_tugasakhir.ui.theme.BlueMain
 
 @Composable
 fun BottomNavigationBar(navController: NavController) {
@@ -44,7 +47,12 @@ fun BottomNavigationBar(navController: NavController) {
                     }
                 },
                 icon = { Icon(item.icon, contentDescription = item.title) },
-                label = { Text(item.title) }
+                label = { Text(item.title) },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = BlueMain,
+                    selectedTextColor = BlueMain,
+                    indicatorColor = Color.Transparent
+                )
             )
         }
     }
