@@ -4,7 +4,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -97,7 +99,7 @@ fun HomeScreen(navController: NavController) {
                     }
                     IconButton(onClick = { navController.navigate(Screen.Settings.route) }) {
                         Image(
-                            painter = painterResource(id = R.drawable.logo), // Replace with a user profile pic
+                            painter = painterResource(id = R.drawable.profile), // Replace with a user profile pic
                             contentDescription = "Profile",
                             modifier = Modifier
                                 .size(32.dp)
@@ -124,14 +126,12 @@ fun HomeScreen(navController: NavController) {
 @Composable
 fun FilterChips() {
     var selectedChipIndex by remember { mutableStateOf(0) }
-    val chipTitles = listOf("Semua", "Infrastruktur", "Kesehatan", "Pendidikan")
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+    val chipTitles = listOf("Semua", "Infrastruktur", "Kesehatan", "Pendidikan", "Lingkungan")
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        chipTitles.forEachIndexed { index, title ->
+        itemsIndexed(chipTitles) { index, title ->
             InputChip(
                 selected = selectedChipIndex == index,
                 onClick = { selectedChipIndex = index },

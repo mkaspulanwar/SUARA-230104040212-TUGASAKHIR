@@ -49,7 +49,7 @@ fun SettingsScreen(navController: NavController) {
         ) {
             Spacer(modifier = Modifier.height(16.dp))
             Image(
-                painter = painterResource(id = R.drawable.logo),
+                painter = painterResource(id = R.drawable.profile),
                 contentDescription = "Avatar",
                 modifier = Modifier
                     .size(100.dp)
@@ -57,7 +57,7 @@ fun SettingsScreen(navController: NavController) {
                     .border(3.dp, Color(0xFFE3F2FD), CircleShape)
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text("Budi Santoso", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text("M. Kaspul Anwar", fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Text("NIK: 3201**********", fontSize = 14.sp, color = Color.Gray)
             Spacer(modifier = Modifier.height(32.dp))
 

@@ -3,6 +3,7 @@ package id.antasari.suara_230104040212_tugasakhir.ui.screen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,7 +43,6 @@ data class StatusInfo(
 fun AspirationScreen(navController: NavController) {
     val sampleAspirations = remember {
         listOf(
-            AspirationItem("#LP-8821", "Perbaikan Jalan Berlubang di Jl. Sudirman", "2 hours ago", "Menunggu"),
             AspirationItem("#LP-8805", "Lampu Penerangan Jalan Mati di Sektor 9", "1 day ago", "Diproses"),
             AspirationItem("#LP-8750", "Permintaan Tong Sampah Umum Taman Kota", "1 week ago", "Selesai"),
             AspirationItem("#LP-8642", "Pemangkasan Pohon Rawan Tumbang", "2 weeks ago", "Selesai")
@@ -50,7 +50,7 @@ fun AspirationScreen(navController: NavController) {
     }
 
     var searchText by remember { mutableStateOf("") }
-    val filters = listOf("Semua", "Menunggu", "Diproses", "Selesai")
+    val filters = listOf("Semua", "Diproses", "Selesai")
     var selectedFilter by remember { mutableStateOf("Semua") }
 
     Scaffold(
@@ -91,11 +91,11 @@ fun AspirationScreen(navController: NavController) {
                 Spacer(Modifier.height(16.dp))
 
                 // Filter Chips
-                Row(
+                LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    filters.forEach { filter ->
+                    items(filters) { filter ->
                         Button(
                             onClick = { selectedFilter = filter },
                             colors = ButtonDefaults.buttonColors(
@@ -190,7 +190,6 @@ fun AspirationCard(aspiration: AspirationItem) {
 @Composable
 fun StatusChip(status: String) {
     val statusInfo = when (status) {
-        "Menunggu" -> StatusInfo(Color(0xFFFFFBEB), Color(0xFFF59E0B), null, true)
         "Diproses" -> StatusInfo(Color(0xFFEFF6FF), Color(0xFF3B82F6), Icons.Default.Refresh, false)
         "Selesai" -> StatusInfo(Color(0xFFF0FDF4), Color(0xFF16A34A), Icons.Default.CheckCircle, false)
         else -> StatusInfo(Color.LightGray, Color.Black, null, false)
