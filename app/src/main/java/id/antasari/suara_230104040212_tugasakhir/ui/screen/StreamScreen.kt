@@ -117,6 +117,7 @@ fun StreamScreen(navController: NavController) {
 @Composable
 fun StreamTopAppBar() {
     TopAppBar(
+        modifier = Modifier.statusBarsPadding(),
         title = {
             Text(
                 "Suara Warga",

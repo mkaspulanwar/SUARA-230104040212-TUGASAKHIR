@@ -78,6 +78,7 @@ fun HomeScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
+                modifier = Modifier.statusBarsPadding(),
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(

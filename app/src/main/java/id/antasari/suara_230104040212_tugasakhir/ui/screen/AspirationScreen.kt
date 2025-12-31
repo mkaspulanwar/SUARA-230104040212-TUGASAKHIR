@@ -128,6 +128,7 @@ fun AspirationScreen(navController: NavController) {
 @Composable
 fun AspirationTopAppBar() {
     TopAppBar(
+        modifier = Modifier.statusBarsPadding(),
         title = {
             Text(
                 "Aspirasi",
