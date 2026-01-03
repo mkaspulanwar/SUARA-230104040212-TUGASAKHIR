@@ -15,6 +15,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
@@ -25,18 +26,32 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import id.antasari.suara_230104040212_tugasakhir.R
+import id.antasari.suara_230104040212_tugasakhir.ui.factory.ViewModelFactory
 import id.antasari.suara_230104040212_tugasakhir.ui.theme.Suara_230104040212_tugasakhirTheme
+import id.antasari.suara_230104040212_tugasakhir.ui.viewmodel.LoginViewModel
 
 @Composable
 fun LoginScreen(
-    onLoginClicked: () -> Unit,
+    onLoginSuccess: () -> Unit,
     onRegisterClicked: () -> Unit,
-    onForgotPasswordClicked: () -> Unit
+    onForgotPasswordClicked: () -> Unit,
+    viewModel: LoginViewModel = viewModel(factory = ViewModelFactory(LocalContext.current))
 ) {
-    var nikOrEmail by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    val identifier by viewModel.identifier.collectAsState()
+    val password by viewModel.password.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val isLoggedIn by viewModel.isLoggedIn.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn) {
+            onLoginSuccess()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -71,8 +86,8 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         OutlinedTextField(
-            value = nikOrEmail,
-            onValueChange = { nikOrEmail = it },
+            value = identifier,
+            onValueChange = { viewModel.onIdentifierChange(it) },
             label = { Text("NIK / Email") },
             leadingIcon = {
                 Icon(
@@ -88,7 +103,7 @@ fun LoginScreen(
 
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = { viewModel.onPasswordChange(it) },
             label = { Text("Password") },
             leadingIcon = {
                 Icon(
@@ -125,17 +140,27 @@ fun LoginScreen(
             )
         }
 
+        if (errorMessage != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(errorMessage!!, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+        }
+
 
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick = onLoginClicked,
+            onClick = { viewModel.login() },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(16.dp),
+            enabled = !isLoading
         ) {
-            Text(text = "Masuk", fontSize = 18.sp)
+            if (isLoading) {
+                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+            } else {
+                Text(text = "Masuk", fontSize = 18.sp)
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))

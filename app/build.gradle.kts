@@ -63,4 +63,7 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    // SDK Appwrite untuk Android
+    implementation("io.appwrite:sdk-for-android:5.1.0")
 }

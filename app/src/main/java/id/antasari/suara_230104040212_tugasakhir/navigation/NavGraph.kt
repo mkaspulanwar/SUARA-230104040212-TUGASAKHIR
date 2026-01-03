@@ -17,17 +17,17 @@ import id.antasari.suara_230104040212_tugasakhir.ui.screen.SettingsScreen
 fun NavGraph(navController: NavHostController) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Splash.route
+        startDestination = Screen.Login.route
     ) {
-        composable(Screen.Splash.route) {
-            SplashScreen(navController = navController)
-        }
-        composable(Screen.Welcome.route) {
-            WelcomeScreen(navController = navController)
-        }
+//        composable(Screen.Splash.route) {
+//            SplashScreen(navController = navController)
+//        }
+//        composable(Screen.Welcome.route) {
+//            WelcomeScreen(navController = navController)
+//        }
         composable(Screen.Login.route) {
             LoginScreen(
-                onLoginClicked = {
+                onLoginSuccess = {
                     navController.navigate(Screen.Home.route) {
                         popUpTo(navController.graph.startDestinationId)
                         launchSingleTop = true
@@ -39,8 +39,8 @@ fun NavGraph(navController: NavHostController) {
         }
         composable(Screen.Register.route) {
             RegistrationScreen(
-                onRegisterClicked = {},
-                onLoginClicked = { navController.navigate(Screen.Login.route) },
+                onRegisterSuccess = { navController.popBackStack() },
+                onLoginClicked = { navController.popBackStack() },
                 onTermsClicked = {},
                 onPrivacyPolicyClicked = {}
             )

@@ -28,7 +28,7 @@ fun SplashScreen(navController: NavController) {
     LaunchedEffect(key1 = true) {
         delay(3000)
         navController.popBackStack()
-        navController.navigate(Screen.Welcome.route)
+        navController.navigate(Screen.Login.route)
     }
     Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFF1C74E9)) {
         Box(
