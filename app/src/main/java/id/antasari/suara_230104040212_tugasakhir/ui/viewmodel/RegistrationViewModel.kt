@@ -4,7 +4,8 @@ import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import id.antasari.suara_230104040212_tugasakhir.data.remote.AppwriteService
-import io.appwrite.ID
+import io.appwrite.Permission
+import io.appwrite.Role
 import io.appwrite.exceptions.AppwriteException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -51,6 +52,9 @@ class RegistrationViewModel(private val appwriteService: AppwriteService) : View
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+
+    private val _successMessage = MutableStateFlow<String?>(null)
+    val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
 
     private val _isSuccess = MutableStateFlow(false)
     val isSuccess: StateFlow<Boolean> = _isSuccess.asStateFlow()
@@ -130,6 +134,12 @@ class RegistrationViewModel(private val appwriteService: AppwriteService) : View
                 _password.value.isNotBlank() && _confirmPassword.value.isNotBlank()
     }
 
+    fun onMessagesShown() {
+        _errorMessage.value = null
+        _successMessage.value = null
+    }
+
+
     fun register() {
         if (!validateAllFields()) {
             return
@@ -138,28 +148,44 @@ class RegistrationViewModel(private val appwriteService: AppwriteService) : View
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
+            _successMessage.value = null
             _isSuccess.value = false
 
             try {
-                // 1. Create user account
+                // 1. Create user account.
                 appwriteService.account.create(
-                    userId = ID.unique(),
+                    userId = _nik.value,
                     email = _email.value,
                     password = _password.value,
                     name = _nama.value
                 )
 
-                // Create session to be able to update prefs
-                appwriteService.account.createEmailPasswordSession(_email.value, _password.value)
-
-                // 2. Store NIK in user preferences
-                appwriteService.account.updatePrefs(
-                    prefs = mapOf("nik" to _nik.value)
+                // 2. Login to create a user session.
+                appwriteService.account.createEmailPasswordSession(
+                    email = _email.value,
+                    password = _password.value
                 )
 
+                // 3. Store user details in 'users' collection
+                appwriteService.databases.createDocument(
+                    databaseId = "6958cd64000647aadc01",
+                    collectionId = "users",
+                    documentId = _nik.value,
+                    data = mapOf(
+                        "nama" to _nama.value,
+                        "email" to _email.value
+                    ),
+                    permissions = listOf(
+                        Permission.read(Role.user(_nik.value)),
+                        Permission.update(Role.user(_nik.value)),
+                        Permission.delete(Role.user(_nik.value))
+                    )
+                )
+
+                _successMessage.value = "Akun berhasil dibuat"
                 _isSuccess.value = true
             } catch (e: AppwriteException) {
-                _errorMessage.value = e.message ?: "An unknown error occurred"
+                _errorMessage.value = "Akun gagal dibuat: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
