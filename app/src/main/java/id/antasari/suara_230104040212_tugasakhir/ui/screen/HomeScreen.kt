@@ -77,7 +77,6 @@ fun HomeScreen(navController: NavController) {
             }
         },
         bottomBar = {
-            // Aktifkan jika Anda sudah memiliki BottomNavigationBar
             BottomNavigationBar(navController = navController)
         }
     ) { paddingValues ->
@@ -88,7 +87,9 @@ fun HomeScreen(navController: NavController) {
                 .padding(paddingValues)
         ) {
             items(dummyProposals) { proposal ->
-                NewsCard(proposal)
+                NewsCard(proposal, onClick = {
+                    navController.navigate("policy_screen")
+                })
             }
         }
     }
@@ -125,11 +126,12 @@ fun FilterSection() {
 }
 
 @Composable
-fun NewsCard(proposal: Proposal) {
+fun NewsCard(proposal: Proposal, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)

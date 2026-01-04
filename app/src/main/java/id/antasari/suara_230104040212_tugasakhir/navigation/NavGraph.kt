@@ -7,6 +7,7 @@ import androidx.navigation.compose.composable
 import id.antasari.suara_230104040212_tugasakhir.ui.screen.AspirationScreen
 import id.antasari.suara_230104040212_tugasakhir.ui.screen.HomeScreen
 import id.antasari.suara_230104040212_tugasakhir.ui.screen.LoginScreen
+import id.antasari.suara_230104040212_tugasakhir.ui.screen.PolicyScreen
 import id.antasari.suara_230104040212_tugasakhir.ui.screen.RegistrationScreen
 import id.antasari.suara_230104040212_tugasakhir.ui.screen.SplashScreen
 import id.antasari.suara_230104040212_tugasakhir.ui.screen.StreamScreen
@@ -56,6 +57,9 @@ fun NavGraph(navController: NavHostController) {
         }
         composable(Screen.Settings.route) {
             SettingsScreen(navController = navController)
+        }
+        composable(Screen.Policy.route) {
+            PolicyScreen(navController = navController)
         }
     }
 }

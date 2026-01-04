@@ -9,4 +9,5 @@ sealed class Screen(val route: String) {
     object Stream : Screen("stream_screen")
     object Aspiration : Screen("aspiration_screen")
     object Settings : Screen("settings_screen")
+    object Policy : Screen("policy_screen")
 }
