@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import id.antasari.suara_230104040212_tugasakhir.R
+import id.antasari.suara_230104040212_tugasakhir.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,7 +96,7 @@ fun SettingsScreen(navController: NavController) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column {
-                    SettingsItem(icon = Icons.Default.Edit, text = "Edit Profil")
+                    SettingsItem(icon = Icons.Default.Edit, text = "Edit Profil", onClick = { navController.navigate(Screen.EditProfile.route) })
                     Divider(modifier = Modifier.padding(horizontal = 16.dp))
                     SettingsItem(icon = Icons.Default.Notifications, text = "Notifikasi")
                     Divider(modifier = Modifier.padding(horizontal = 16.dp))
@@ -136,11 +137,11 @@ fun SettingsScreen(navController: NavController) {
 }
 
 @Composable
-fun SettingsItem(icon: ImageVector, text: String) {
+fun SettingsItem(icon: ImageVector, text: String, onClick: () -> Unit = {}) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { }
+            .clickable(onClick = onClick)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
