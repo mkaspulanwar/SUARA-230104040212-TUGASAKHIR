@@ -10,7 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,6 +26,33 @@ import id.antasari.suara_230104040212_tugasakhir.R
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(navController: NavController) {
+    var showLogoutDialog by remember { mutableStateOf(false) }
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Konfirmasi Keluar") },
+            text = { Text("Apakah Anda Yakin?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        // Handle logout logic here
+                        showLogoutDialog = false
+                    }
+                ) {
+                    Text("Ya")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showLogoutDialog = false }
+                ) {
+                    Text("Tidak")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -93,7 +120,7 @@ fun SettingsScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = { /* Handle logout */ },
+                onClick = { showLogoutDialog = true },
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                 modifier = Modifier.fillMaxWidth()
