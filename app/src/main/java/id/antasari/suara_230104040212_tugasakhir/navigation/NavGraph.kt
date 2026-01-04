@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import id.antasari.suara_230104040212_tugasakhir.ui.screen.AspirationFormScreen
 import id.antasari.suara_230104040212_tugasakhir.ui.screen.AspirationScreen
 import id.antasari.suara_230104040212_tugasakhir.ui.screen.HomeScreen
 import id.antasari.suara_230104040212_tugasakhir.ui.screen.LoginScreen
@@ -54,6 +55,9 @@ fun NavGraph(navController: NavHostController) {
         }
         composable(Screen.Aspiration.route) {
             AspirationScreen(navController = navController)
+        }
+        composable(Screen.AspirationForm.route) {
+            AspirationFormScreen(navController = navController)
         }
         composable(Screen.Settings.route) {
             SettingsScreen(navController = navController)

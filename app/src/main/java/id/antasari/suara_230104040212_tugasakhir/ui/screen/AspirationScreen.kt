@@ -57,7 +57,7 @@ fun AspirationScreen(navController: NavController) {
         topBar = { AspirationTopAppBar() },
         bottomBar = { BottomNavigationBar(navController = navController) },
         floatingActionButton = {
-            FloatingActionButton(onClick = { /* TODO: Handle FAB click */ }) {
+            FloatingActionButton(onClick = { navController.navigate("aspiration_form") }) {
                 Icon(Icons.Filled.Add, contentDescription = "Add Aspiration")
             }
         },
