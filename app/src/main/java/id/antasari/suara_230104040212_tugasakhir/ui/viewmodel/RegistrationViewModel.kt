@@ -59,20 +59,10 @@ class RegistrationViewModel(private val appwriteService: AppwriteService) : View
     private val _isSuccess = MutableStateFlow(false)
     val isSuccess: StateFlow<Boolean> = _isSuccess.asStateFlow()
 
-
-    // --- Event Handlers for UI input changes ---
-
+    // --- Event Handlers ---
     fun onNikChange(input: String) {
         _nik.value = input
-        if (input.isNotBlank()) {
-            _nikError.value = if (input.length == 16 && input.all { it.isDigit() }) {
-                null
-            } else {
-                "NIK harus terdiri dari 16 digit angka."
-            }
-        } else {
-            _nikError.value = "NIK tidak boleh kosong."
-        }
+        _nikError.value = if (input.length == 16 && input.all { it.isDigit() }) null else "NIK harus 16 digit angka."
     }
 
     fun onNamaChange(input: String) {
@@ -82,77 +72,49 @@ class RegistrationViewModel(private val appwriteService: AppwriteService) : View
 
     fun onEmailChange(input: String) {
         _email.value = input
-        if (input.isNotBlank()) {
-            _emailError.value = if (Patterns.EMAIL_ADDRESS.matcher(input).matches()) {
-                null
-            } else {
-                "Format email tidak valid."
-            }
-        } else {
-            _emailError.value = "Email tidak boleh kosong."
-        }
+        _emailError.value = if (Patterns.EMAIL_ADDRESS.matcher(input).matches()) null else "Format email tidak valid."
     }
 
     fun onPasswordChange(input: String) {
         _password.value = input
-        if (input.isNotBlank()) {
-            _passwordError.value = if (input.length >= 8) null else "Password minimal 8 karakter."
-            // Re-validate confirm password whenever password changes
-            if (_confirmPassword.value.isNotEmpty()) {
-                onConfirmPasswordChange(_confirmPassword.value)
-            }
-        } else {
-            _passwordError.value = "Password tidak boleh kosong."
-        }
+        _passwordError.value = if (input.length >= 8) null else "Password minimal 8 karakter."
+        if (_confirmPassword.value.isNotEmpty()) onConfirmPasswordChange(_confirmPassword.value)
     }
 
     fun onConfirmPasswordChange(input: String) {
         _confirmPassword.value = input
-        if (input.isNotBlank()) {
-            _confirmPasswordError.value = if (input == _password.value) {
-                null
-            } else {
-                "Password dan konfirmasi password tidak cocok."
-            }
-        } else {
-            _confirmPasswordError.value = "Konfirmasi password tidak boleh kosong."
-        }
+        _confirmPasswordError.value = if (input == _password.value) null else "Password tidak cocok."
     }
 
     private fun validateAllFields(): Boolean {
-        // Trigger validation for all fields to show errors if they are empty and user clicks register.
         onNikChange(_nik.value)
         onNamaChange(_nama.value)
         onEmailChange(_email.value)
         onPasswordChange(_password.value)
         onConfirmPasswordChange(_confirmPassword.value)
 
-        // Check if there are any errors
-        return _nikError.value == null && _namaError.value == null && _emailError.value == null &&
-                _passwordError.value == null && _confirmPasswordError.value == null &&
-                _nik.value.isNotBlank() && _nama.value.isNotBlank() && _email.value.isNotBlank() &&
-                _password.value.isNotBlank() && _confirmPassword.value.isNotBlank()
+        return _nikError.value == null && _namaError.value == null &&
+                _emailError.value == null && _passwordError.value == null &&
+                _confirmPasswordError.value == null && _nik.value.isNotBlank()
     }
-
-    fun onMessagesShown() {
-        _errorMessage.value = null
-        _successMessage.value = null
-    }
-
 
     fun register() {
-        if (!validateAllFields()) {
-            return
-        }
+        if (!validateAllFields()) return
 
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
-            _successMessage.value = null
             _isSuccess.value = false
 
             try {
-                // 1. Create user account.
+                // LANGKAH PENTING: Bersihkan sesi lama jika ada untuk menghindari error "session is active"
+                try {
+                    appwriteService.account.deleteSession(sessionId = "current")
+                } catch (e: Exception) {
+                    // Abaikan jika tidak ada sesi untuk dihapus
+                }
+
+                // 1. Buat akun user
                 appwriteService.account.create(
                     userId = _nik.value,
                     email = _email.value,
@@ -160,13 +122,13 @@ class RegistrationViewModel(private val appwriteService: AppwriteService) : View
                     name = _nama.value
                 )
 
-                // 2. Login to create a user session.
+                // 2. Login untuk mendapatkan sesi aktif (diperlukan untuk menulis ke database)
                 appwriteService.account.createEmailPasswordSession(
                     email = _email.value,
                     password = _password.value
                 )
 
-                // 3. Store user details in 'users' collection
+                // 3. Simpan detail user di collection 'users'
                 appwriteService.databases.createDocument(
                     databaseId = "6958cd64000647aadc01",
                     collectionId = "users",
@@ -185,10 +147,15 @@ class RegistrationViewModel(private val appwriteService: AppwriteService) : View
                 _successMessage.value = "Akun berhasil dibuat"
                 _isSuccess.value = true
             } catch (e: AppwriteException) {
-                _errorMessage.value = "Akun gagal dibuat: ${e.message}"
+                _errorMessage.value = "Gagal: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
         }
+    }
+
+    fun onMessagesShown() {
+        _errorMessage.value = null
+        _successMessage.value = null
     }
 }

@@ -41,27 +41,53 @@ class LoginViewModel(private val appwriteService: AppwriteService) : ViewModel()
             _errorMessage.value = null
 
             val currentIdentifier = _identifier.value
-            val isNik = currentIdentifier.all { it.isDigit() } && currentIdentifier.length == 16
 
+            // Validasi Input Sederhana
+            if (currentIdentifier.isBlank() || _password.value.isBlank()) {
+                _errorMessage.value = "Email dan Password tidak boleh kosong."
+                _isLoading.value = false
+                return@launch
+            }
+
+            val isNik = currentIdentifier.all { it.isDigit() } && currentIdentifier.length == 16
             if (isNik) {
-                // TODO: Implement NIK to Email lookup from the database in the future.
                 _errorMessage.value = "Login dengan NIK belum didukung. Silakan gunakan email Anda."
                 _isLoading.value = false
                 return@launch
             }
 
             try {
-                // Assume the identifier is an email
+                // --- PERBAIKAN UTAMA ---
+                // Mencoba menghapus sesi lama jika ada.
+                // Jika tidak ada sesi aktif, Appwrite akan melempar exception,
+                // kita bungkus dalam try-catch agar proses login tetap berlanjut.
+                try {
+                    account.deleteSession(sessionId = "current")
+                } catch (e: Exception) {
+                    // Abaikan error jika memang tidak ada sesi aktif
+                }
+
+                // Setelah dipastikan bersih, buat sesi baru
                 account.createEmailPasswordSession(
                     email = currentIdentifier,
                     password = _password.value
                 )
                 _isLoggedIn.value = true
+
             } catch (e: AppwriteException) {
-                _errorMessage.value = e.message ?: "An unknown error occurred"
+                // Menangani pesan error agar lebih mudah dipahami user
+                _errorMessage.value = when (e.code) {
+                    401 -> "Email atau Password salah."
+                    else -> e.message ?: "Terjadi kesalahan yang tidak diketahui."
+                }
             } finally {
                 _isLoading.value = false
             }
         }
+    }
+
+    // Tambahkan fungsi untuk mereset pesan error saat UI sudah menampilkannya
+    fun clearError() {
+        _errorMessage.value = null
     }
 }
