@@ -66,4 +66,7 @@ dependencies {
 
     // SDK Appwrite untuk Android
     implementation("io.appwrite:sdk-for-android:5.1.0")
+
+    // Coil untuk memuat gambar dari URL image_url
+    implementation("io.coil-kt:coil-compose:2.5.0")
 }

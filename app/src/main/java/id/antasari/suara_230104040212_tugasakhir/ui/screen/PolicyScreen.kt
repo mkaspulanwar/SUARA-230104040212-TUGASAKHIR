@@ -10,22 +10,30 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
+import androidx.compose.material.icons.outlined.ThumbDown
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
+import coil.compose.AsyncImage
 import id.antasari.suara_230104040212_tugasakhir.R
+import id.antasari.suara_230104040212_tugasakhir.data.model.PolicyModel
+import id.antasari.suara_230104040212_tugasakhir.data.remote.AppwriteService
+import id.antasari.suara_230104040212_tugasakhir.ui.factory.ViewModelFactory
+import id.antasari.suara_230104040212_tugasakhir.ui.viewmodel.PolicyViewModel
 
+// Data Model untuk Komentar (Masih Dummy sementara, nanti bisa dihubungkan ke tabel policy_comments)
 data class Comment(
     val id: Int,
     val author: String,
@@ -37,26 +45,39 @@ data class Comment(
 )
 
 val dummyComments = listOf(
-    Comment(1, "Budi Santoso", "2 jam yang lalu", "Sangat mendukung inisiatif ini! Terutama bagian cuti ayah, itu sangat progresif untuk Indonesia. Semoga implementasinya diawasi ketat.", 24, true),
-    Comment(2, "Siti Aminah", "5 jam yang lalu", "Perlu revisi di pasal 4 ayat 2. Beban anggaran daerah akan terlalu berat jika subsidi ditanggung penuh oleh PEMDA tanpa bantuan pusat.", 56, false),
-    Comment(3, "Admin SUARA", "2 jam yang lalu", "Terima kasih atas masukannya, Bu Siti. Poin ini sudah kami notifikasi ke tim perumus.", 0, true, isAdmin = true)
+    Comment(1, "Budi Santoso", "2 jam yang lalu", "Sangat mendukung inisiatif ini! Pembangunan tanggul laut sangat krusial untuk mencegah banjir rob di Jakarta Utara.", 24, true),
+    Comment(2, "Siti Aminah", "5 jam yang lalu", "Harus dipastikan dampak lingkungan terhadap nelayan sekitar tidak diabaikan.", 56, false),
+    Comment(3, "Admin SUARA", "2 jam yang lalu", "Terima kasih atas masukannya. Tim terkait sedang melakukan studi dampak lingkungan lebih lanjut.", 0, true, isAdmin = true)
 )
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PolicyScreen(navController: NavController) {
+fun PolicyScreen(navController: NavController, policyId: String?) {
+    val context = LocalContext.current
+    val service = remember { AppwriteService(context) }
+    val viewModel: PolicyViewModel = viewModel(factory = ViewModelFactory(context))
+
+    // State untuk menampung detail kebijakan yang dicari
+    var selectedPolicy by remember { mutableStateOf<PolicyModel?>(null) }
+
+    // Ambil data detail saat layar dibuka
+    LaunchedEffect(policyId) {
+        if (policyId != null) {
+            selectedPolicy = service.getPolicyById(policyId)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Detail Kebijakan", fontWeight = FontWeight.Bold) },
+                title = { Text("Detail Kebijakan", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /*TODO*/ }) {
+                    IconButton(onClick = { /* Share action */ }) {
                         Icon(Icons.Default.Share, contentDescription = "Share")
                     }
                 },
@@ -67,40 +88,64 @@ fun PolicyScreen(navController: NavController) {
             CommentInputField()
         }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color.White)
-                .padding(16.dp)
-        ) {
-            item { PolicyHeader() }
-            item { Spacer(modifier = Modifier.height(24.dp)) }
-            item { PolicyBody() }
-            item { Spacer(modifier = Modifier.height(24.dp)) }
-            item { PublicSentiment() }
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Komentar (124)", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Text("Lihat Semua", color = MaterialTheme.colorScheme.primary, fontSize = 14.sp)
-                }
+        if (selectedPolicy == null) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Color(0xFF1A73E8))
             }
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-            items(dummyComments) { comment ->
-                CommentItem(comment)
-                Spacer(modifier = Modifier.height(16.dp))
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(Color.White)
+                    .padding(16.dp)
+            ) {
+                item {
+                    PolicyHeader(
+                        institution = selectedPolicy!!.institution,
+                        date = selectedPolicy!!.createdAt,
+                        title = selectedPolicy!!.title
+                    )
+                }
+                item { Spacer(modifier = Modifier.height(16.dp)) }
+                item {
+                    // Menampilkan Gambar Kebijakan dari Appwrite Storage
+                    AsyncImage(
+                        model = selectedPolicy!!.imageUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                item { Spacer(modifier = Modifier.height(24.dp)) }
+                item { PolicyBody(content = selectedPolicy!!.content) }
+                item { Spacer(modifier = Modifier.height(24.dp)) }
+                item { PublicSentiment() }
+                item { Spacer(modifier = Modifier.height(24.dp)) }
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Komentar Masyarakat", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    }
+                }
+                item { Spacer(modifier = Modifier.height(16.dp)) }
+                items(dummyComments) { comment ->
+                    CommentItem(comment)
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
             }
         }
     }
 }
 
 @Composable
-fun PolicyHeader() {
+fun PolicyHeader(institution: String, date: String, title: String) {
     Column {
         Surface(
             color = Color(0xFFE3F2FD),
@@ -109,30 +154,30 @@ fun PolicyHeader() {
             Text(
                 text = "STATUS: TERBUKA",
                 color = Color(0xFF1565C0),
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
             )
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text("12 Okt 2023 - Kementerian Sosial", fontSize = 12.sp, color = Color.Gray)
+        Spacer(modifier = Modifier.height(12.dp))
+        Text("$institution • ${date.take(10)}", fontSize = 12.sp, color = Color.Gray)
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            "RUU Kesejahteraan Ibu dan Anak",
-            fontSize = 24.sp,
+            text = title,
+            fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
-            lineHeight = 32.sp
+            lineHeight = 30.sp
         )
     }
 }
 
 @Composable
-fun PolicyBody() {
+fun PolicyBody(content: String) {
     Text(
-        "Rancangan undang-undang ini bertujuan untuk menjamin hak-hak dasar ibu dan anak dalam masa pertumbuhan, memastikan akses kesehatan yang layak, serta dukungan nutrisi yang memadai bagi keluarga prasejahtera.\n\nFokus utama meliputi pemberian cuti melahirkan yang lebih panjang bagi ibu pekerja, penyediaan ruang laktasi di tempat umum dan tempat kerja, serta subsidi gizi untuk anak usia dini di wilayah 3T (Tertinggal, Terdepan, dan Terluar). Kebijakan ini diharapkan dapat menurunkan angka stunting nasional sebesar 14% dalam 5 tahun ke depan.",
+        text = content,
         fontSize = 15.sp,
-        lineHeight = 24.sp,
-        color = Color.DarkGray
+        lineHeight = 26.sp,
+        color = Color(0xFF333333)
     )
 }
 
@@ -140,17 +185,15 @@ fun PolicyBody() {
 fun PublicSentiment() {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text("Sentimen Publik", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-        Text("Total Suara: 15.4k", fontSize = 12.sp, color = Color.Gray)
+        Text("Total Dukungan: 1.2k", fontSize = 12.sp, color = Color.Gray)
         Spacer(modifier = Modifier.height(16.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceAround
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            SentimentCard(true, 72)
-            SentimentCard(false, 28)
+            Box(modifier = Modifier.weight(1f)) { SentimentCard(true, 85) }
+            Box(modifier = Modifier.weight(1f)) { SentimentCard(false, 15) }
         }
-        Spacer(modifier = Modifier.height(16.dp))
-        Text("Suara Anda bersifat anonim dan terenkripsi.", fontSize = 12.sp, color = Color.Gray)
     }
 }
 
@@ -158,118 +201,91 @@ fun PublicSentiment() {
 fun SentimentCard(isAgreement: Boolean, percentage: Int) {
     val backgroundColor = if (isAgreement) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
     val contentColor = if (isAgreement) Color(0xFF2E7D32) else Color(0xFFC62828)
-    val icon = if (isAgreement) Icons.Outlined.ThumbUp else Icons.Default.ThumbDown
+    val icon = if (isAgreement) Icons.Outlined.ThumbUp else Icons.Outlined.ThumbDown
 
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        modifier = Modifier.width(150.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = null, tint = contentColor)
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(if (isAgreement) "Setuju" else "Tidak Setuju", color = contentColor, fontWeight = FontWeight.Bold)
-            }
-            Text("$percentage%", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = contentColor)
-            LinearProgressIndicator(
-                progress = { percentage / 100f },
-                color = contentColor,
-                trackColor = contentColor.copy(alpha = 0.3f),
-                modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape)
-            )
+            Icon(icon, contentDescription = null, tint = contentColor)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(if (isAgreement) "Setuju" else "Tidak", color = contentColor, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            Text("$percentage%", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = contentColor)
         }
     }
 }
+
+// ... Sisanya (CommentItem & CommentInputField) tetap sama seperti sebelumnya ...
 
 @Composable
 fun CommentItem(comment: Comment) {
     Row {
-        if(comment.isAdmin) {
-             Image(
-                painter = painterResource(id = R.drawable.logo), // Replace with your admin logo drawable
-                contentDescription = "Admin",
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-            )
-        } else {
-             Image(
-                painter = painterResource(id = R.drawable.ic_launcher_background), // Replace with your user avatar drawable
-                contentDescription = comment.author,
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-            )
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(if (comment.isAdmin) Color(0xFF1A73E8) else Color(0xFFF1F3F4)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (comment.isAdmin) {
+                Icon(Icons.Default.Shield, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+            } else {
+                Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray)
+            }
         }
 
-
         Spacer(modifier = Modifier.width(12.dp))
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(comment.author, fontWeight = FontWeight.Bold)
+                Text(comment.author, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 if (comment.isAdmin) {
                     Spacer(modifier = Modifier.width(4.dp))
-                    Surface(color = Color.Blue, shape = RoundedCornerShape(4.dp)) {
-                         Text("OFFICIAL", color = Color.White, fontSize = 8.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp), fontWeight = FontWeight.Bold)
+                    Surface(color = Color(0xFF1A73E8), shape = RoundedCornerShape(4.dp)) {
+                        Text("OFFICIAL", color = Color.White, fontSize = 8.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp), fontWeight = FontWeight.Bold)
                     }
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(comment.time, fontSize = 12.sp, color = Color.Gray)
                 Spacer(modifier = Modifier.weight(1f))
-                val statusColor = if (comment.isAgreement) Color(0xFF2E7D32) else Color(0xFFC62828)
-                val statusText = if (comment.isAgreement) "Setuju" else "Tidak Setuju"
-                if (!comment.isAdmin) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = statusColor, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(statusText, color = statusColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-
+                Text(comment.time, fontSize = 11.sp, color = Color.Gray)
             }
             Spacer(modifier = Modifier.height(4.dp))
-            Card(
-                shape = RoundedCornerShape(8.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F3F4))
-            ) {
-                Text(comment.content, modifier = Modifier.padding(12.dp), fontSize = 14.sp)
-            }
+            Text(comment.content, fontSize = 14.sp, color = Color.DarkGray)
 
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-                Icon(Icons.Outlined.ThumbUp, contentDescription = "Likes", modifier = Modifier.size(16.dp), tint = Color.Gray)
+                Icon(Icons.Outlined.ThumbUp, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.Gray)
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(comment.likes.toString(), fontSize = 12.sp, color = Color.Gray)
+                Text(comment.likes.toString(), fontSize = 11.sp, color = Color.Gray)
                 Spacer(modifier = Modifier.width(16.dp))
-                Icon(Icons.Outlined.ChatBubbleOutline, contentDescription = "Reply", modifier = Modifier.size(16.dp), tint = Color.Gray)
-                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Balas", fontSize = 12.sp, color = Color.Gray)
+                Text("Balas", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A73E8))
             }
         }
     }
 }
 
-
 @Composable
 fun CommentInputField() {
-    Surface(shadowElevation = 8.dp) {
+    Surface(shadowElevation = 8.dp, color = Color.White) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color.White)
+                .navigationBarsPadding()
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(
                 value = "",
                 onValueChange = {},
-                placeholder = { Text("Tulis pendapatmu...") },
+                placeholder = { Text("Beri tanggapan Anda...", fontSize = 14.sp) },
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(24.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                     unfocusedBorderColor = Color.LightGray,
-                )
+                    unfocusedBorderColor = Color(0xFFE0E0E0),
+                    focusedBorderColor = Color(0xFF1A73E8)
+                ),
+                maxLines = 3
             )
             Spacer(modifier = Modifier.width(8.dp))
             IconButton(
@@ -277,16 +293,10 @@ fun CommentInputField() {
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary)
+                    .background(Color(0xFF1A73E8))
             ) {
                 Icon(Icons.Default.Send, contentDescription = "Send", tint = Color.White)
             }
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun PolicyScreenPreview() {
-    PolicyScreen(rememberNavController())
 }

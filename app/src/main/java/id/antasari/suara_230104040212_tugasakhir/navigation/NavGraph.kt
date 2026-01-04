@@ -2,20 +2,11 @@ package id.antasari.suara_230104040212_tugasakhir.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType // Tambahkan import ini
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import id.antasari.suara_230104040212_tugasakhir.ui.screen.AspirationFormScreen
-import id.antasari.suara_230104040212_tugasakhir.ui.screen.AspirationScreen
-import id.antasari.suara_230104040212_tugasakhir.ui.screen.EditProfileScreen
-import id.antasari.suara_230104040212_tugasakhir.ui.screen.HomeScreen
-import id.antasari.suara_230104040212_tugasakhir.ui.screen.LoginScreen
-import id.antasari.suara_230104040212_tugasakhir.ui.screen.NotificationScreen
-import id.antasari.suara_230104040212_tugasakhir.ui.screen.PolicyScreen
-import id.antasari.suara_230104040212_tugasakhir.ui.screen.RegistrationScreen
-import id.antasari.suara_230104040212_tugasakhir.ui.screen.SplashScreen
-import id.antasari.suara_230104040212_tugasakhir.ui.screen.StreamScreen
-import id.antasari.suara_230104040212_tugasakhir.ui.screen.WelcomeScreen
-import id.antasari.suara_230104040212_tugasakhir.ui.screen.SettingsScreen
+import androidx.navigation.navArgument // Tambahkan import ini
+import id.antasari.suara_230104040212_tugasakhir.ui.screen.*
 
 @Composable
 fun NavGraph(navController: NavHostController) {
@@ -23,17 +14,11 @@ fun NavGraph(navController: NavHostController) {
         navController = navController,
         startDestination = Screen.Login.route
     ) {
-//        composable(Screen.Splash.route) {
-//            SplashScreen(navController = navController)
-//        }
-//        composable(Screen.Welcome.route) {
-//            WelcomeScreen(navController = navController)
-//        }
         composable(Screen.Login.route) {
             LoginScreen(
                 onLoginSuccess = {
                     navController.navigate(Screen.Home.route) {
-                        popUpTo(navController.graph.startDestinationId)
+                        popUpTo(navController.graph.startDestinationId) { inclusive = true }
                         launchSingleTop = true
                     }
                 },
@@ -41,6 +26,7 @@ fun NavGraph(navController: NavHostController) {
                 onForgotPasswordClicked = {}
             )
         }
+
         composable(Screen.Register.route) {
             RegistrationScreen(
                 onRegisterSuccess = { navController.popBackStack() },
@@ -49,27 +35,41 @@ fun NavGraph(navController: NavHostController) {
                 onPrivacyPolicyClicked = {}
             )
         }
+
         composable(Screen.Home.route) {
             HomeScreen(navController = navController)
         }
+
         composable(Screen.Stream.route) {
             StreamScreen(navController = navController)
         }
+
         composable(Screen.Aspiration.route) {
             AspirationScreen(navController = navController)
         }
+
         composable(Screen.AspirationForm.route) {
             AspirationFormScreen(navController = navController)
         }
+
         composable(Screen.Settings.route) {
             SettingsScreen(navController = navController)
         }
+
         composable(Screen.EditProfile.route) {
             EditProfileScreen(navController = navController)
         }
-        composable(Screen.Policy.route) {
-            PolicyScreen(navController = navController)
+
+        // --- UPDATE BAGIAN INI ---
+        // Menambahkan rute dinamis agar bisa menerima ID kebijakan dari HomeScreen
+        composable(
+            route = "policy_detail/{policyId}",
+            arguments = listOf(navArgument("policyId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val policyId = backStackEntry.arguments?.getString("policyId")
+            PolicyScreen(navController = navController, policyId = policyId)
         }
+
         composable(Screen.Notification.route) {
             NotificationScreen(navController = navController)
         }

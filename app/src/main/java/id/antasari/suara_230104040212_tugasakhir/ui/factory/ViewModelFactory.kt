@@ -5,12 +5,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import id.antasari.suara_230104040212_tugasakhir.data.remote.AppwriteService
 import id.antasari.suara_230104040212_tugasakhir.ui.viewmodel.LoginViewModel
+import id.antasari.suara_230104040212_tugasakhir.ui.viewmodel.PolicyViewModel
 import id.antasari.suara_230104040212_tugasakhir.ui.viewmodel.RegistrationViewModel
 
 class ViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        // Menginisialisasi AppwriteService satu kali untuk digunakan oleh semua ViewModel
         val appwriteService = AppwriteService(context.applicationContext)
+
         return when {
             modelClass.isAssignableFrom(RegistrationViewModel::class.java) -> {
                 RegistrationViewModel(appwriteService) as T
@@ -18,7 +21,11 @@ class ViewModelFactory(private val context: Context) : ViewModelProvider.Factory
             modelClass.isAssignableFrom(LoginViewModel::class.java) -> {
                 LoginViewModel(appwriteService) as T
             }
-            else -> throw IllegalArgumentException("Unknown ViewModel class")
+            // Tambahkan logika untuk PolicyViewModel di sini
+            modelClass.isAssignableFrom(PolicyViewModel::class.java) -> {
+                PolicyViewModel(appwriteService) as T
+            }
+            else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }
     }
 }

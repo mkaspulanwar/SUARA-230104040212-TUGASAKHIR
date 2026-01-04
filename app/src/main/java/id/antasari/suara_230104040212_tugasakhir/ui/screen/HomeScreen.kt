@@ -1,6 +1,5 @@
 package id.antasari.suara_230104040212_tugasakhir.ui.screen
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,37 +20,43 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import id.antasari.suara_230104040212_tugasakhir.R
+import coil.compose.AsyncImage
+import id.antasari.suara_230104040212_tugasakhir.data.model.PolicyModel
 import id.antasari.suara_230104040212_tugasakhir.navigation.Screen
+import id.antasari.suara_230104040212_tugasakhir.ui.viewmodel.PolicyViewModel
+import id.antasari.suara_230104040212_tugasakhir.ui.factory.ViewModelFactory
+import java.text.SimpleDateFormat
+import java.util.*
 
-// Data Model
-data class Proposal(
-    val id: Int,
-    val institution: String,
-    val category: String,
-    val title: String,
-    val date: String,
-    val imageUrl: Int,
-    val agreementPercentage: Float,
-    val commentCount: Int // Menambahkan field jumlah komentar
-)
-
-val dummyProposals = listOf(
-    Proposal(1, "Kemendikbud", "Pendidikan", "Guru SD Tak Sengaja Temukan Harta Karun Miliaran di Halaman Sekolah", "4 Jan 2026, 08:30", R.drawable.welcome1, 0.85f, 24),
-    Proposal(2, "Kementerian BUMN", "Ekonomi", "PACK Terbitkan OWK Rp3,26 Triliun, Begini Detailnya", "4 Jan 2026, 08:15", R.drawable.welcome2, 0.60f, 12),
-    Proposal(3, "Kesehatan RI", "Kesehatan", "Update Vaksinasi Nasional 2026: Capaian Target 99%", "4 Jan 2026, 07:45", R.drawable.welcome3, 0.75f, 56),
-    Proposal(4, "Kemenlu", "Internasional", "Chevron Buka Suara Soal Pengambilalihan Minyak di Venezuela", "4 Jan 2026, 07:45", R.drawable.welcome1, 0.45f, 8)
-)
+fun formatAppwriteDate(isoDate: String): String {
+    return try {
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.getDefault())
+        val date = inputFormat.parse(isoDate)
+        val outputFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID"))
+        outputFormat.format(date ?: Date())
+    } catch (e: Exception) {
+        isoDate
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavController) {
+    val context = LocalContext.current
+    val viewModel: PolicyViewModel = viewModel(
+        factory = ViewModelFactory(context)
+    )
+
+    LaunchedEffect(Unit) {
+        viewModel.fetchPolicies()
+    }
+
     Scaffold(
         topBar = {
             Surface(shadowElevation = 3.dp) {
@@ -69,7 +74,9 @@ fun HomeScreen(navController: NavController) {
                         },
                         actions = {
                             IconButton(onClick = { }) { Icon(Icons.Outlined.Search, contentDescription = null) }
-                            IconButton(onClick = { navController.navigate(Screen.Notification.route) }) { Icon(Icons.Outlined.Notifications, contentDescription = null) }
+                            IconButton(onClick = { navController.navigate(Screen.Notification.route) }) {
+                                Icon(Icons.Outlined.Notifications, contentDescription = null)
+                            }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
                     )
@@ -81,16 +88,119 @@ fun HomeScreen(navController: NavController) {
             BottomNavigationBar(navController = navController)
         }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFF8F9FA))
-                .padding(paddingValues)
-        ) {
-            items(dummyProposals) { proposal ->
-                NewsCard(proposal, onClick = {
-                    navController.navigate("policy_screen")
-                })
+        if (viewModel.policies.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Color(0xFF1A73E8))
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFF8F9FA))
+                    .padding(paddingValues)
+            ) {
+                // Tambahkan jarak ekstra agar card pertama tidak mepet ke TopBar
+                item { Spacer(modifier = Modifier.height(12.dp)) }
+
+                items(viewModel.policies) { policy ->
+                    NewsCard(
+                        policy = policy,
+                        onClick = {
+                            navController.navigate("policy_detail/${policy.id}")
+                        }
+                    )
+                }
+
+                // Jarak bawah agar tidak tertutup bottom bar
+                item { Spacer(modifier = Modifier.height(16.dp)) }
+            }
+        }
+    }
+}
+
+@Composable
+fun NewsCard(policy: PolicyModel, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp) // Margin antar card ditingkatkan sedikit
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = policy.institution,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1A73E8)
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = policy.title,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = 22.sp // Jarak antar baris ditingkatkan agar mudah dibaca
+                        // maxLines & overflow dihapus agar tampil penuh
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CategoryBadge(category = policy.category)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = formatAppwriteDate(policy.createdAt),
+                            fontSize = 11.sp,
+                            color = Color.Gray
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                AsyncImage(
+                    model = policy.imageUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(90.dp) // Ukuran gambar diperbesar
+                        .clip(RoundedCornerShape(10.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                LinearProgressIndicator(
+                    progress = { 0.75f },
+                    modifier = Modifier.weight(1f).height(6.dp).clip(CircleShape), // Tinggi progress bar diperbesar
+                    color = Color(0xFF1A73E8),
+                    trackColor = Color(0xFFE8EAED)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text("75% Setuju", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+            HorizontalDivider(color = Color(0xFFF1F3F4))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                ActionItem(Icons.Outlined.ThumbUp, "Setuju")
+                ActionItem(Icons.Outlined.ChatBubbleOutline, "24")
+                ActionItem(Icons.Outlined.Share, "Bagikan")
+                ActionItem(Icons.Outlined.BookmarkBorder, "Simpan")
+                // Icon titik 3 (MoreVert) telah dihapus dari sini
             }
         }
     }
@@ -127,113 +237,9 @@ fun FilterSection() {
 }
 
 @Composable
-fun NewsCard(proposal: Proposal, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = proposal.institution,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1A73E8)
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = proposal.title,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        lineHeight = 20.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CategoryBadge(category = proposal.category)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = proposal.date,
-                            fontSize = 11.sp,
-                            color = Color.Gray
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Image(
-                    painter = painterResource(id = proposal.imageUrl),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(70.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Crop
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                LinearProgressIndicator(
-                    progress = { proposal.agreementPercentage },
-                    modifier = Modifier.weight(1f).height(4.dp).clip(CircleShape),
-                    color = Color(0xFF1A73E8),
-                    trackColor = Color(0xFFE8EAED)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("${(proposal.agreementPercentage * 100).toInt()}% Setuju", fontSize = 11.sp, color = Color.Gray)
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(color = Color(0xFFF1F3F4))
-
-            // --- BAGIAN TOMBOL AKSI (TERMASUK KOMENTAR) ---
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                ActionItem(Icons.Outlined.ThumbUp, "Setuju")
-
-                // Menambahkan Tombol Komentar
-                ActionItem(Icons.Outlined.ChatBubbleOutline, proposal.commentCount.toString())
-
-                ActionItem(Icons.Outlined.Share, "Bagikan")
-                ActionItem(Icons.Outlined.BookmarkBorder, "Simpan")
-                Icon(Icons.Outlined.MoreVert, contentDescription = null, tint = Color.Gray)
-            }
-        }
-    }
-}
-
-@Composable
 fun CategoryBadge(category: String) {
-    val backgroundColor = when (category) {
-        "Kesehatan" -> Color(0xFFE8F5E9)
-        "Pendidikan" -> Color(0xFFE3F2FD)
-        "Ekonomi" -> Color(0xFFFFF3E0)
-        else -> Color(0xFFF5F5F5)
-    }
-    val contentColor = when (category) {
-        "Kesehatan" -> Color(0xFF2E7D32)
-        "Pendidikan" -> Color(0xFF1565C0)
-        "Ekonomi" -> Color(0xFFE65100)
-        else -> Color(0xFF616161)
-    }
-
     Surface(
-        color = backgroundColor,
+        color = Color(0xFFF1F3F4),
         shape = RoundedCornerShape(4.dp)
     ) {
         Text(
@@ -241,7 +247,7 @@ fun CategoryBadge(category: String) {
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
-            color = contentColor
+            color = Color.DarkGray
         )
     }
 }
@@ -251,12 +257,12 @@ fun ActionItem(icon: ImageVector, label: String) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .clip(RoundedCornerShape(4.dp))
-            .clickable { /* Aksi */ }
-            .padding(4.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .clickable { }
+            .padding(horizontal = 6.dp, vertical = 4.dp)
     ) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray)
-        Spacer(modifier = Modifier.width(4.dp))
+        Spacer(modifier = Modifier.width(6.dp))
         Text(label, fontSize = 12.sp, color = Color.Gray)
     }
 }
