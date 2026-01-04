@@ -8,6 +8,7 @@ import id.antasari.suara_230104040212_tugasakhir.ui.screen.AspirationFormScreen
 import id.antasari.suara_230104040212_tugasakhir.ui.screen.AspirationScreen
 import id.antasari.suara_230104040212_tugasakhir.ui.screen.HomeScreen
 import id.antasari.suara_230104040212_tugasakhir.ui.screen.LoginScreen
+import id.antasari.suara_230104040212_tugasakhir.ui.screen.NotificationScreen
 import id.antasari.suara_230104040212_tugasakhir.ui.screen.PolicyScreen
 import id.antasari.suara_230104040212_tugasakhir.ui.screen.RegistrationScreen
 import id.antasari.suara_230104040212_tugasakhir.ui.screen.SplashScreen
@@ -64,6 +65,9 @@ fun NavGraph(navController: NavHostController) {
         }
         composable(Screen.Policy.route) {
             PolicyScreen(navController = navController)
+        }
+        composable(Screen.Notification.route) {
+            NotificationScreen(navController = navController)
         }
     }
 }

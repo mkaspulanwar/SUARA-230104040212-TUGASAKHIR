@@ -11,4 +11,5 @@ sealed class Screen(val route: String) {
     object AspirationForm : Screen("aspiration_form")
     object Settings : Screen("settings_screen")
     object Policy : Screen("policy_screen")
+    object Notification : Screen("notification_screen")
 }

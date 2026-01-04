@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import id.antasari.suara_230104040212_tugasakhir.R
+import id.antasari.suara_230104040212_tugasakhir.navigation.Screen
 
 // Data Model
 data class Proposal(
@@ -68,7 +69,7 @@ fun HomeScreen(navController: NavController) {
                         },
                         actions = {
                             IconButton(onClick = { }) { Icon(Icons.Outlined.Search, contentDescription = null) }
-                            IconButton(onClick = { }) { Icon(Icons.Outlined.Notifications, contentDescription = null) }
+                            IconButton(onClick = { navController.navigate(Screen.Notification.route) }) { Icon(Icons.Outlined.Notifications, contentDescription = null) }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
                     )
