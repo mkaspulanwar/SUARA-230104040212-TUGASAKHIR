@@ -84,16 +84,16 @@ fun HomeScreen(navController: NavController) {
                             Image(
                                 painter = painterResource(id = R.drawable.logo_horizontal_bluenobg),
                                 contentDescription = "Logo",
-                                modifier = Modifier.height(28.dp),
+                                modifier = Modifier.height(30.dp),
                                 contentScale = ContentScale.Fit
                             )
                         },
                         actions = {
-                            IconButton(onClick = { }) {
-                                Icon(Icons.Outlined.Search, contentDescription = null)
-                            }
                             IconButton(onClick = { navController.navigate(Screen.Notification.route) }) {
                                 Icon(Icons.Outlined.Notifications, contentDescription = null)
+                            }
+                            IconButton(onClick = { }) {
+                                Icon(Icons.Outlined.BookmarkBorder, contentDescription = null)
                             }
                         },
                         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -201,7 +201,7 @@ fun NewsCard(policy: PolicyModel, onClick: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                ActionItem(Icons.Outlined.ThumbUp, "Setuju")
+                ActionItem(Icons.Outlined.ThumbUp, "1.1rb")
                 ActionItem(Icons.Outlined.ChatBubbleOutline, "24")
                 ActionItem(Icons.Outlined.Share, "Bagikan")
                 ActionItem(Icons.Outlined.BookmarkBorder, "Simpan")
