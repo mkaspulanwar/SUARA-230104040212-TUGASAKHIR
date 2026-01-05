@@ -1,5 +1,6 @@
 package id.antasari.suara_230104040212_tugasakhir.ui.screen
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,12 +22,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import id.antasari.suara_230104040212_tugasakhir.R
 import id.antasari.suara_230104040212_tugasakhir.data.model.PolicyModel
 import id.antasari.suara_230104040212_tugasakhir.navigation.Screen
 import id.antasari.suara_230104040212_tugasakhir.ui.viewmodel.PolicyViewModel
@@ -61,30 +64,48 @@ fun HomeScreen(navController: NavController) {
         topBar = {
             Surface(shadowElevation = 3.dp) {
                 Column(modifier = Modifier.background(Color.White)) {
-                    TopAppBar(
+                    // MENGGUNAKAN CenterAlignedTopAppBar AGAR LOGO BENAR-BENAR DI TENGAH
+                    CenterAlignedTopAppBar(
                         modifier = Modifier.statusBarsPadding(),
+                        navigationIcon = {
+                            Image(
+                                painter = painterResource(id = R.drawable.profile),
+                                contentDescription = "Profile",
+                                modifier = Modifier
+                                    .padding(start = 16.dp)
+                                    .size(35.dp)
+                                    .clip(CircleShape)
+                                    .clickable { /* Aksi profil */ },
+                                contentScale = ContentScale.Crop
+                            )
+                        },
                         title = {
-                            Column {
-                                Text("Suara Rakyat", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(12.dp), tint = Color.Gray)
-                                    Text("DKI Jakarta", fontSize = 12.sp, color = Color.Gray)
-                                }
-                            }
+                            // Logo sekarang akan otomatis berada di tengah layar
+                            Image(
+                                painter = painterResource(id = R.drawable.logo_horizontal_bluenobg),
+                                contentDescription = "Logo",
+                                modifier = Modifier.height(28.dp),
+                                contentScale = ContentScale.Fit
+                            )
                         },
                         actions = {
-                            IconButton(onClick = { }) { Icon(Icons.Outlined.Search, contentDescription = null) }
+                            IconButton(onClick = { }) {
+                                Icon(Icons.Outlined.Search, contentDescription = null)
+                            }
                             IconButton(onClick = { navController.navigate(Screen.Notification.route) }) {
                                 Icon(Icons.Outlined.Notifications, contentDescription = null)
                             }
                         },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                            containerColor = Color.White
+                        )
                     )
                     FilterSection()
                 }
             }
         },
         bottomBar = {
+            // Pastikan komponen ini sudah Anda buat/import
             BottomNavigationBar(navController = navController)
         }
     ) { paddingValues ->
@@ -99,7 +120,6 @@ fun HomeScreen(navController: NavController) {
                     .background(Color(0xFFF8F9FA))
                     .padding(paddingValues)
             ) {
-                // Tambahkan jarak ekstra agar card pertama tidak mepet ke TopBar
                 item { Spacer(modifier = Modifier.height(12.dp)) }
 
                 items(viewModel.policies) { policy ->
@@ -110,8 +130,6 @@ fun HomeScreen(navController: NavController) {
                         }
                     )
                 }
-
-                // Jarak bawah agar tidak tertutup bottom bar
                 item { Spacer(modifier = Modifier.height(16.dp)) }
             }
         }
@@ -123,7 +141,7 @@ fun NewsCard(policy: PolicyModel, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp) // Margin antar card ditingkatkan sedikit
+            .padding(horizontal = 16.dp, vertical = 8.dp)
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(12.dp),
@@ -138,19 +156,14 @@ fun NewsCard(policy: PolicyModel, onClick: () -> Unit) {
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF1A73E8)
                     )
-
                     Spacer(modifier = Modifier.height(4.dp))
-
                     Text(
                         text = policy.title,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        lineHeight = 22.sp // Jarak antar baris ditingkatkan agar mudah dibaca
-                        // maxLines & overflow dihapus agar tampil penuh
+                        lineHeight = 22.sp
                     )
-
                     Spacer(modifier = Modifier.height(8.dp))
-
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CategoryBadge(category = policy.category)
                         Spacer(modifier = Modifier.width(8.dp))
@@ -161,46 +174,37 @@ fun NewsCard(policy: PolicyModel, onClick: () -> Unit) {
                         )
                     }
                 }
-
                 Spacer(modifier = Modifier.width(16.dp))
-
                 AsyncImage(
                     model = policy.imageUrl,
                     contentDescription = null,
                     modifier = Modifier
-                        .size(90.dp) // Ukuran gambar diperbesar
+                        .size(90.dp)
                         .clip(RoundedCornerShape(10.dp)),
                     contentScale = ContentScale.Crop
                 )
             }
-
             Spacer(modifier = Modifier.height(14.dp))
-
             Row(verticalAlignment = Alignment.CenterVertically) {
                 LinearProgressIndicator(
                     progress = { 0.75f },
-                    modifier = Modifier.weight(1f).height(6.dp).clip(CircleShape), // Tinggi progress bar diperbesar
+                    modifier = Modifier.weight(1f).height(6.dp).clip(CircleShape),
                     color = Color(0xFF1A73E8),
                     trackColor = Color(0xFFE8EAED)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text("75% Setuju", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
             }
-
             Spacer(modifier = Modifier.height(14.dp))
             HorizontalDivider(color = Color(0xFFF1F3F4))
-
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 10.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 ActionItem(Icons.Outlined.ThumbUp, "Setuju")
                 ActionItem(Icons.Outlined.ChatBubbleOutline, "24")
                 ActionItem(Icons.Outlined.Share, "Bagikan")
                 ActionItem(Icons.Outlined.BookmarkBorder, "Simpan")
-                // Icon titik 3 (MoreVert) telah dihapus dari sini
             }
         }
     }
@@ -210,7 +214,6 @@ fun NewsCard(policy: PolicyModel, onClick: () -> Unit) {
 fun FilterSection() {
     val categories = listOf("Semua", "Pendidikan", "Kesehatan", "Ekonomi", "Lingkungan")
     var selected by remember { mutableStateOf(0) }
-
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -238,10 +241,7 @@ fun FilterSection() {
 
 @Composable
 fun CategoryBadge(category: String) {
-    Surface(
-        color = Color(0xFFF1F3F4),
-        shape = RoundedCornerShape(4.dp)
-    ) {
+    Surface(color = Color(0xFFF1F3F4), shape = RoundedCornerShape(4.dp)) {
         Text(
             text = category,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
@@ -256,10 +256,7 @@ fun CategoryBadge(category: String) {
 fun ActionItem(icon: ImageVector, label: String) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .clickable { }
-            .padding(horizontal = 6.dp, vertical = 4.dp)
+        modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable { }.padding(horizontal = 6.dp, vertical = 4.dp)
     ) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Gray)
         Spacer(modifier = Modifier.width(6.dp))
