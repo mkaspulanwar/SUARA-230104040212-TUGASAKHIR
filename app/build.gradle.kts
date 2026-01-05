@@ -55,7 +55,7 @@ dependencies {
     implementation("com.google.accompanist:accompanist-pager:0.34.0")
     implementation("com.google.accompanist:accompanist-pager-indicators:0.34.0")
     implementation("io.coil-kt:coil-compose:2.6.0")
-    implementation("androidx.core:core-splashscreen:1.1.0-rc01")
+    // implementation("androidx.core:core-splashscreen:1.1.0-rc01")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

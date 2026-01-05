@@ -3,14 +3,14 @@
 
     <style name="Theme.Suara_230104040212_tugasakhir" parent="android:Theme.Material.Light.NoActionBar" />
 
-    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
-        <!-- Set the splash screen background, animated icon, and animation duration. -->
-        <item name="windowSplashScreenBackground">@color/blue</item>
+<!--    <style name="Theme.App.Starting" parent="Theme.SplashScreen">-->
+<!--        &lt;!&ndash; Set the splash screen background, animated icon, and animation duration. &ndash;&gt;-->
+<!--        <item name="windowSplashScreenBackground">@color/white</item>-->
 
-        <!-- Use windowSplashScreenAnimatedIcon to add a drawable or an animated           drawable. One of these is required. -->
-        <item name="windowSplashScreenAnimatedIcon">@drawable/logo</item>
+<!--        &lt;!&ndash; Use windowSplashScreenAnimatedIcon to add a drawable or an animated           drawable. One of these is required. &ndash;&gt;-->
+<!--        <item name="windowSplashScreenAnimatedIcon">@drawable/logo_blue_nobg</item>-->
 
-        <!-- Set the theme of the Activity that follows your splash screen. -->
-        <item name="postSplashScreenTheme">@style/Theme.Suara_230104040212_tugasakhir</item>
-    </style>
+<!--        &lt;!&ndash; Set the theme of the Activity that follows your splash screen. &ndash;&gt;-->
+<!--        <item name="postSplashScreenTheme">@style/Theme.Suara_230104040212_tugasakhir</item>-->
+<!--    </style>-->
 </resources>

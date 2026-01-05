@@ -61,7 +61,7 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Image(
-            painter = painterResource(id = R.drawable.logo),
+            painter = painterResource(id = R.drawable.logo_blue_nobg),
             contentDescription = "Logo",
             modifier = Modifier.size(100.dp)
         )
