@@ -36,7 +36,7 @@ fun SplashScreen(navController: NavController) {
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Image(painter = painterResource(id = R.drawable.logo), contentDescription = "Logo")
+                Image(painter = painterResource(id = R.drawable.logo_blue_nobg), contentDescription = "Logo")
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(text = "SUARA", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 Text(text = "CIVIC PARTICIPATION", fontSize = 16.sp, color = Color.White)

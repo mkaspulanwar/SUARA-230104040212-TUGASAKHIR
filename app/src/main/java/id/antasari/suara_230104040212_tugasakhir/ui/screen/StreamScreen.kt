@@ -47,7 +47,7 @@ val dummyPosts = listOf(
         id = 1,
         userName = "Budi Santoso",
         userLocation = "Menteng, Jakarta Pusat",
-        userAvatar = R.drawable.logo, // Using logo as placeholder
+        userAvatar = R.drawable.logo_blue_nobg, // Using logo as placeholder
         timeAgo = "2h ago",
         content = "Jalan di Kecamatan Menteng rusak parah setelah hujan semalam. Mohon dinas terkait segera cek. Banyak pengendara motor yang hampir jatuh karena lubang tertutup genangan air.",
         image = null,
@@ -59,7 +59,7 @@ val dummyPosts = listOf(
         id = 2,
         userName = "Siti Aminah",
         userLocation = "Kebayoran Baru",
-        userAvatar = R.drawable.logo, // Using logo as placeholder
+        userAvatar = R.drawable.logo_blue_nobg, // Using logo as placeholder
         timeAgo = "5h ago",
         content = "Sangat setuju dengan kebijakan baru mengenai taman kota. Anak-anak jadi punya tempat bermain yang aman dan bersih. Semoga perawatannya juga konsisten ya Pak/Bu! 🌳🌲",
         image = R.drawable.welcome1, // Using welcome1 as placeholder
@@ -71,7 +71,7 @@ val dummyPosts = listOf(
         id = 3,
         userName = "Andi Pratama",
         userLocation = "Tebet",
-        userAvatar = R.drawable.logo, // Using logo as placeholder
+        userAvatar = R.drawable.logo_blue_nobg, // Using logo as placeholder
         timeAgo = "1d ago",
         content = "Lampu penerangan jalan di sepanjang jalan utama banyak yang mati. Cukup berbahaya kalau malam hari.",
         image = null,
@@ -152,7 +152,7 @@ fun PostInputCard() {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Image(
-                    painter = painterResource(id = R.drawable.logo), // Placeholder
+                    painter = painterResource(id = R.drawable.logo_blue_nobg), // Placeholder
                     contentDescription = "Your Avatar",
                     modifier = Modifier
                         .size(40.dp)
