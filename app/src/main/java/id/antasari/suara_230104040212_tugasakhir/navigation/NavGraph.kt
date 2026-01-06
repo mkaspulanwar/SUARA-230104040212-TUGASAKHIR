@@ -23,7 +23,16 @@ fun NavGraph(navController: NavHostController) {
                     }
                 },
                 onRegisterClicked = { navController.navigate(Screen.Register.route) },
-                onForgotPasswordClicked = {}
+                onForgotPasswordClicked = {},
+
+                // --- TAMBAHKAN 2 BARIS INI ---
+                onBackClicked = {
+                    navController.popBackStack() // Ini akan kembali ke layar sebelumnya (atau keluar app jika ini layar awal)
+                },
+                onSupportClicked = {
+                    // Untuk sementara kosongkan dulu (nanti bisa diisi navigasi ke WA/Email)
+                }
+
             )
         }
 

@@ -1,5 +1,6 @@
 package id.antasari.suara_230104040212_tugasakhir.ui.screen
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,10 +10,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.HeadsetMic
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -34,8 +37,11 @@ import id.antasari.suara_230104040212_tugasakhir.R
 import id.antasari.suara_230104040212_tugasakhir.ui.factory.ViewModelFactory
 import id.antasari.suara_230104040212_tugasakhir.ui.viewmodel.LoginViewModel
 
-// Palet Warna
+// Warna
 val BlueMain = Color(0xFF1C74E9)
+val TextDark = Color(0xFF1F2937)
+val TextGray = Color(0xFF6B7280)
+val BorderColor = Color(0xFFE5E7EB)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +49,8 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onRegisterClicked: () -> Unit,
     onForgotPasswordClicked: () -> Unit,
+    onBackClicked: () -> Unit, // Callback baru untuk tombol kembali
+    onSupportClicked: () -> Unit, // Callback baru untuk support
     viewModel: LoginViewModel = viewModel(factory = ViewModelFactory(LocalContext.current))
 ) {
     val identifier by viewModel.identifier.collectAsState()
@@ -52,7 +60,6 @@ fun LoginScreen(
     val errorMessage by viewModel.errorMessage.collectAsState()
 
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
-    var rememberMe by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(isLoggedIn) {
         if (isLoggedIn) {
@@ -60,25 +67,58 @@ fun LoginScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
-        // 1. BANNER ATAS (DI-PERBESAR TINGGINYA)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+    ) {
+        // --- 1. BANNER IMAGE (Background Layer) ---
         Image(
             painter = painterResource(id = R.drawable.logo_banner_login),
             contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(340.dp), // Tinggi banner ditingkatkan dari 260dp ke 340dp
+                .height(360.dp)
+                .align(Alignment.TopCenter),
             contentScale = ContentScale.Crop
         )
 
-        // 2. KONTEN UTAMA / CARD LOGIN (POSISI DI-PERRENDAH)
+        // --- 2. TOP ACTION BUTTONS (Overlay Layer) ---
+        // Diletakkan di dalam Row agar posisinya sejajar Kiri (Back) dan Kanan (Support)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                // Menggunakan statusBarsPadding agar tidak tertutup jam/sinyal HP
+                .statusBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .align(Alignment.TopCenter), // Pastikan menempel di atas
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Tombol Kembali (Kiri)
+            SmallCircleButton(
+                icon = Icons.AutoMirrored.Filled.ArrowBack, // Pakai AutoMirrored
+                description = "Kembali",
+                onClick = onBackClicked
+            )
+
+            // Tombol Support (Kanan)
+            SmallCircleButton(
+                icon = Icons.Default.HeadsetMic,
+                description = "Hubungi Support",
+                onClick = onSupportClicked
+            )
+        }
+
+        // --- 3. LOGIN CARD (Content Layer) ---
         Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 300.dp), // Overlap dikurangi (dari 220dp ke 300dp) agar card tampak lebih kecil di layar
+                .padding(top = 320.dp)
+                .imePadding(),
             shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
             color = Color.White,
-            shadowElevation = 8.dp
+            shadowElevation = 12.dp
         ) {
             Column(
                 modifier = Modifier
@@ -87,55 +127,66 @@ fun LoginScreen(
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Spacer(modifier = Modifier.height(32.dp))
 
-                // Judul yang lebih lengkap
-                Text(
-                    text = "Selamat Datang di Suara",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.Black,
-                    textAlign = TextAlign.Center
+                // Indikator garis
+                Spacer(modifier = Modifier.height(16.dp))
+                Box(
+                    modifier = Modifier
+                        .width(40.dp)
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Color.LightGray.copy(alpha = 0.5f))
                 )
 
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Header
+                Text(
+                    text = "Selamat Datang",
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextDark,
+                    textAlign = TextAlign.Center
+                )
                 Text(
                     text = "Suarakan aspirasimu untuk masa depan.",
                     fontSize = 14.sp,
-                    color = Color.Gray,
-                    modifier = Modifier.padding(top = 4.dp)
+                    color = TextGray,
+                    modifier = Modifier.padding(top = 6.dp),
+                    textAlign = TextAlign.Center
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Input Field NIK / Email
+                // --- INPUT SECTION ---
                 OutlinedTextField(
                     value = identifier,
                     onValueChange = { viewModel.onIdentifierChange(it) },
                     label = { Text("NIK / Email") },
-                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = BlueMain) },
+                    leadingIcon = { Icon(Icons.Outlined.Person, contentDescription = null, tint = BlueMain) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = BlueMain,
                         focusedLabelColor = BlueMain,
-                        cursorColor = BlueMain
+                        cursorColor = BlueMain,
+                        unfocusedBorderColor = BorderColor
                     ),
                     singleLine = true
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Input Field Password
                 OutlinedTextField(
                     value = password,
                     onValueChange = { viewModel.onPasswordChange(it) },
                     label = { Text("Password") },
-                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = BlueMain) },
+                    leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null, tint = BlueMain) },
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
-                        val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
+                        val image = if (passwordVisible) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = null)
+                            Icon(imageVector = image, contentDescription = null, tint = TextGray)
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
@@ -143,51 +194,46 @@ fun LoginScreen(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = BlueMain,
                         focusedLabelColor = BlueMain,
-                        cursorColor = BlueMain
+                        cursorColor = BlueMain,
+                        unfocusedBorderColor = BorderColor
                     ),
                     singleLine = true
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Utility Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                // Lupa Password
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp, bottom = 24.dp),
+                    contentAlignment = Alignment.CenterEnd
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clickable { rememberMe = !rememberMe }
-                    ) {
-                        Checkbox(
-                            checked = rememberMe,
-                            onCheckedChange = { rememberMe = it },
-                            colors = CheckboxDefaults.colors(checkedColor = BlueMain)
-                        )
-                        Text("Ingat saya", fontSize = 14.sp, color = Color.DarkGray)
-                    }
-                    TextButton(onClick = { onForgotPasswordClicked() }) {
-                        Text("Lupa Password?", color = BlueMain, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                    }
+                    Text(
+                        text = "Lupa Password?",
+                        color = BlueMain,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { onForgotPasswordClicked() }
+                    )
                 }
 
                 if (errorMessage != null) {
                     Text(
                         text = errorMessage!!,
                         color = MaterialTheme.colorScheme.error,
-                        textAlign = TextAlign.Center,
                         fontSize = 13.sp,
-                        modifier = Modifier.padding(vertical = 8.dp)
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 12.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                // --- ACTION BUTTONS ---
 
-                // Tombol Masuk
+                // 1. Masuk
                 Button(
                     onClick = { viewModel.login() },
-                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
                     shape = RoundedCornerShape(12.dp),
                     enabled = !isLoading,
                     colors = ButtonDefaults.buttonColors(containerColor = BlueMain)
@@ -199,32 +245,63 @@ fun LoginScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                // Divider Social Login
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    HorizontalDivider(modifier = Modifier.weight(1f), thickness = 1.dp, color = Color(0xFFEEEEEE))
-                    Text(" Atau masuk dengan ", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(horizontal = 8.dp))
-                    HorizontalDivider(modifier = Modifier.weight(1f), thickness = 1.dp, color = Color(0xFFEEEEEE))
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Social Icons
+                // 2. Divider
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SocialIcon(R.drawable.logo_google)
-                    SocialIcon(R.drawable.logo_facebook)
-                    SocialIcon(R.drawable.logo_x)
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = BorderColor)
+                    Text(
+                        text = "Atau masuk dengan",
+                        fontSize = 12.sp,
+                        color = TextGray,
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = BorderColor)
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                // Footer
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Belum punya akun? ", color = Color.Gray, fontSize = 14.sp)
+                // 3. Google
+                OutlinedButton(
+                    onClick = { /* TODO: Google Login */ },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, BorderColor),
+                    colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.logo_google),
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Google",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextDark
+                        )
+                    }
+                }
+
+                // SPACER MAGIC
+                Spacer(modifier = Modifier.weight(1f))
+
+                // Footer (Hanya Register Link)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 24.dp)
+                ) {
+                    Text("Belum punya akun? ", color = TextGray, fontSize = 14.sp)
                     Text(
                         text = "Daftar Sekarang",
                         color = BlueMain,
@@ -234,27 +311,34 @@ fun LoginScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                // Padding aman navigation bar
+                Spacer(modifier = Modifier.navigationBarsPadding())
             }
         }
     }
 }
 
+// Komponen Helper untuk Tombol Bulat di Atas Banner
 @Composable
-fun SocialIcon(iconRes: Int) {
-    Box(
-        modifier = Modifier
-            .size(54.dp)
-            .clip(CircleShape)
-            .background(Color(0xFFF8F9FA))
-            .clickable { /* Aksi Social Login */ }
-            .padding(14.dp),
-        contentAlignment = Alignment.Center
+fun SmallCircleButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    description: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = Color.White.copy(alpha = 0.9f), // Sedikit transparan agar menyatu dengan banner
+        shadowElevation = 4.dp,
+        modifier = Modifier.size(40.dp)
     ) {
-        Image(
-            painter = painterResource(id = iconRes),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize()
-        )
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = icon,
+                contentDescription = description,
+                tint = TextDark,
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
