@@ -34,7 +34,7 @@ import id.antasari.suara_230104040212_tugasakhir.R
 import id.antasari.suara_230104040212_tugasakhir.ui.factory.ViewModelFactory
 import id.antasari.suara_230104040212_tugasakhir.ui.viewmodel.LoginViewModel
 
-// Palet Warna Sesuai Permintaan
+// Palet Warna
 val BlueMain = Color(0xFF1C74E9)
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,23 +61,24 @@ fun LoginScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
-        // 1. BANNER DI ATAS
+        // 1. BANNER ATAS (DI-PERBESAR TINGGINYA)
         Image(
-            painter = painterResource(id = R.drawable.logo_banner_login), // Pastikan file banner ada di drawable
+            painter = painterResource(id = R.drawable.logo_banner_login),
             contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(260.dp),
+                .height(340.dp), // Tinggi banner ditingkatkan dari 260dp ke 340dp
             contentScale = ContentScale.Crop
         )
 
-        // 2. KONTEN UTAMA (OVERLAP KE BANNER)
+        // 2. KONTEN UTAMA / CARD LOGIN (POSISI DI-PERRENDAH)
         Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 220.dp), // Membuat konten "naik" ke banner
+                .padding(top = 300.dp), // Overlap dikurangi (dari 220dp ke 300dp) agar card tampak lebih kecil di layar
             shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-            color = Color.White
+            color = Color.White,
+            shadowElevation = 8.dp
         ) {
             Column(
                 modifier = Modifier
@@ -88,17 +89,25 @@ fun LoginScreen(
             ) {
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Greeting Sesuai Permintaan
+                // Judul yang lebih lengkap
                 Text(
-                    text = "Selamat Datang",
-                    fontSize = 28.sp,
+                    text = "Selamat Datang di Suara",
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = Color.Black
+                    color = Color.Black,
+                    textAlign = TextAlign.Center
+                )
+
+                Text(
+                    text = "Suarakan aspirasimu untuk masa depan.",
+                    fontSize = 14.sp,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(top = 4.dp)
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Input NIK / Email
+                // Input Field NIK / Email
                 OutlinedTextField(
                     value = identifier,
                     onValueChange = { viewModel.onIdentifierChange(it) },
@@ -108,13 +117,15 @@ fun LoginScreen(
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = BlueMain,
-                        focusedLabelColor = BlueMain
-                    )
+                        focusedLabelColor = BlueMain,
+                        cursorColor = BlueMain
+                    ),
+                    singleLine = true
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Input Password
+                // Input Field Password
                 OutlinedTextField(
                     value = password,
                     onValueChange = { viewModel.onPasswordChange(it) },
@@ -131,13 +142,15 @@ fun LoginScreen(
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = BlueMain,
-                        focusedLabelColor = BlueMain
-                    )
+                        focusedLabelColor = BlueMain,
+                        cursorColor = BlueMain
+                    ),
+                    singleLine = true
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Remember Me & Forgot Password
+                // Utility Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -160,21 +173,27 @@ fun LoginScreen(
                 }
 
                 if (errorMessage != null) {
-                    Text(errorMessage!!, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center, fontSize = 13.sp)
+                    Text(
+                        text = errorMessage!!,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Tombol Login Utama
+                // Tombol Masuk
                 Button(
                     onClick = { viewModel.login() },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
                     shape = RoundedCornerShape(12.dp),
                     enabled = !isLoading,
                     colors = ButtonDefaults.buttonColors(containerColor = BlueMain)
                 ) {
                     if (isLoading) {
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                     } else {
                         Text("Masuk", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
@@ -182,27 +201,28 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // 3. SOCIAL LOGIN SECTION
+                // Divider Social Login
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     HorizontalDivider(modifier = Modifier.weight(1f), thickness = 1.dp, color = Color(0xFFEEEEEE))
-                    Text(" Atau masuk dengan ", fontSize = 12.sp, color = Color.Gray)
+                    Text(" Atau masuk dengan ", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(horizontal = 8.dp))
                     HorizontalDivider(modifier = Modifier.weight(1f), thickness = 1.dp, color = Color(0xFFEEEEEE))
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // Social Icons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    SocialIcon(R.drawable.logo_google) // Pastikan file ikon ada di drawable
+                    SocialIcon(R.drawable.logo_google)
                     SocialIcon(R.drawable.logo_facebook)
                     SocialIcon(R.drawable.logo_x)
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Footer Daftar Sekarang
+                // Footer
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Belum punya akun? ", color = Color.Gray, fontSize = 14.sp)
                     Text(
@@ -214,7 +234,7 @@ fun LoginScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
@@ -226,11 +246,15 @@ fun SocialIcon(iconRes: Int) {
         modifier = Modifier
             .size(54.dp)
             .clip(CircleShape)
-            .background(Color(0xFFF5F5F5))
+            .background(Color(0xFFF8F9FA))
             .clickable { /* Aksi Social Login */ }
             .padding(14.dp),
         contentAlignment = Alignment.Center
     ) {
-        Image(painter = painterResource(id = iconRes), contentDescription = null)
+        Image(
+            painter = painterResource(id = iconRes),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
