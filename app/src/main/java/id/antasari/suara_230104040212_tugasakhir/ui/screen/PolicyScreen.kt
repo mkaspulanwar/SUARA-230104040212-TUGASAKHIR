@@ -48,7 +48,7 @@ val dummyComments = listOf(
     Comment(1, "Budi Santoso", "2 jam yang lalu", "Sangat mendukung inisiatif ini! Pembangunan tanggul laut sangat krusial untuk mencegah banjir rob di Jakarta Utara.", 24, true),
     Comment(2, "Siti Aminah", "5 jam yang lalu", "Harus dipastikan dampak lingkungan terhadap nelayan sekitar tidak diabaikan.", 56, false),
     Comment(3, "Admin SUARA", "2 jam yang lalu", "Terima kasih atas masukannya. Tim terkait sedang melakukan studi dampak lingkungan lebih lanjut.", 0, true, isAdmin = true)
-)
+)                          
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
