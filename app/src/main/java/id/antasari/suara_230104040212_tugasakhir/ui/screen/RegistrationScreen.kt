@@ -110,7 +110,7 @@ fun RegistrationScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = SuaraWhite
-    ) { paddingValues ->
+    ) { paddingValues ->5
         // Ganti Column utama dengan Box agar bisa overlap
         Box(
             modifier = Modifier
@@ -123,12 +123,12 @@ fun RegistrationScreen(
             // Gambar ditempel di paling atas (TopCenter)
             // Tingginya diatur fix (misal 280dp) agar tertutup sebagian oleh form
             Image(
-                painter = painterResource(id = R.drawable.logo_banner_login), // Pastikan resource ini benar
+                painter = painterResource(id = R.drawable.banner_registration), // Pastikan resource ini benar
                 contentDescription = "Registration Banner",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(280.dp) // Tinggi gambar
+                    .height(260.dp) // Tinggi gambar
                     .align(Alignment.TopCenter)
             )
 

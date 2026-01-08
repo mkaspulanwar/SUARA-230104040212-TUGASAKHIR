@@ -1,5 +1,6 @@
 package id.antasari.suara_230104040212_tugasakhir.ui.screen
 
+import android.app.Activity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -25,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -32,6 +34,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import id.antasari.suara_230104040212_tugasakhir.R
 import id.antasari.suara_230104040212_tugasakhir.ui.factory.ViewModelFactory
@@ -49,8 +52,8 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onRegisterClicked: () -> Unit,
     onForgotPasswordClicked: () -> Unit,
-    onBackClicked: () -> Unit, // Callback baru untuk tombol kembali
-    onSupportClicked: () -> Unit, // Callback baru untuk support
+    onBackClicked: () -> Unit,
+    onSupportClicked: () -> Unit,
     viewModel: LoginViewModel = viewModel(factory = ViewModelFactory(LocalContext.current))
 ) {
     val identifier by viewModel.identifier.collectAsState()
@@ -61,6 +64,17 @@ fun LoginScreen(
 
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
 
+    // Konfigurasi Status Bar agar Ikon menjadi Gelap (Hitam)
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            // isAppearanceLightStatusBars = true artinya background status bar dianggap 'terang' (putih),
+            // sehingga sistem akan mengubah warna ikon menjadi gelap (hitam).
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = true
+        }
+    }
+
     LaunchedEffect(isLoggedIn) {
         if (isLoggedIn) {
             onLoginSuccess()
@@ -70,34 +84,37 @@ fun LoginScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(Color.White) // Background root Putih
     ) {
         // --- 1. BANNER IMAGE (Background Layer) ---
         Image(
-            painter = painterResource(id = R.drawable.logo_banner_login),
+            painter = painterResource(id = R.drawable.banner_login),
             contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(360.dp)
+                // PENTING: statusBarsPadding disini mendorong gambar ke bawah,
+                // sehingga area di baliknya (Box putih) terlihat di bagian Notch/Status Bar.
+                .statusBarsPadding()
+                .height(320.dp)
                 .align(Alignment.TopCenter),
             contentScale = ContentScale.Crop
         )
 
         // --- 2. TOP ACTION BUTTONS (Overlay Layer) ---
-        // Diletakkan di dalam Row agar posisinya sejajar Kiri (Back) dan Kanan (Support)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                // Menggunakan statusBarsPadding agar tidak tertutup jam/sinyal HP
+                // statusBarsPadding disini memastikan tombol tidak tertutup notch,
+                // posisinya akan sejajar dengan bagian atas Gambar Banner.
                 .statusBarsPadding()
                 .padding(horizontal = 24.dp, vertical = 16.dp)
-                .align(Alignment.TopCenter), // Pastikan menempel di atas
+                .align(Alignment.TopCenter),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Tombol Kembali (Kiri)
             SmallCircleButton(
-                icon = Icons.AutoMirrored.Filled.ArrowBack, // Pakai AutoMirrored
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
                 description = "Kembali",
                 onClick = onBackClicked
             )
@@ -114,6 +131,7 @@ fun LoginScreen(
         Surface(
             modifier = Modifier
                 .fillMaxSize()
+                // Padding top disesuaikan karena gambar turun sedikit akibat statusBarsPadding
                 .padding(top = 320.dp)
                 .imePadding(),
             shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
@@ -296,7 +314,7 @@ fun LoginScreen(
                 // SPACER MAGIC
                 Spacer(modifier = Modifier.weight(1f))
 
-                // Footer (Hanya Register Link)
+                // Footer
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(vertical = 24.dp)
@@ -318,7 +336,7 @@ fun LoginScreen(
     }
 }
 
-// Komponen Helper untuk Tombol Bulat di Atas Banner
+// Komponen Helper untuk Tombol Bulat
 @Composable
 fun SmallCircleButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -328,7 +346,7 @@ fun SmallCircleButton(
     Surface(
         onClick = onClick,
         shape = CircleShape,
-        color = Color.White.copy(alpha = 0.9f), // Sedikit transparan agar menyatu dengan banner
+        color = Color.White.copy(alpha = 0.9f),
         shadowElevation = 4.dp,
         modifier = Modifier.size(40.dp)
     ) {
