@@ -158,4 +158,4 @@ class RegistrationViewModel(private val appwriteService: AppwriteService) : View
         _errorMessage.value = null
         _successMessage.value = null
     }
-}
+}   
