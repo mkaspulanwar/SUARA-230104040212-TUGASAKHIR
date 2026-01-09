@@ -1,7 +1,8 @@
 package id.antasari.suara_230104040212_tugasakhir.ui.screen
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,7 +10,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.ThumbDown
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.*
@@ -20,20 +20,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import id.antasari.suara_230104040212_tugasakhir.R
-import id.antasari.suara_230104040212_tugasakhir.data.model.PolicyModel
 import id.antasari.suara_230104040212_tugasakhir.data.remote.AppwriteService
 import id.antasari.suara_230104040212_tugasakhir.ui.factory.ViewModelFactory
 import id.antasari.suara_230104040212_tugasakhir.ui.viewmodel.PolicyViewModel
+import java.text.NumberFormat
+import java.util.Locale
 
-// Data Model untuk Komentar (Masih Dummy sementara, nanti bisa dihubungkan ke tabel policy_comments)
+// Data Model untuk Komentar (Masih Dummy sementara)
 data class Comment(
     val id: Int,
     val author: String,
@@ -48,22 +47,28 @@ val dummyComments = listOf(
     Comment(1, "Budi Santoso", "2 jam yang lalu", "Sangat mendukung inisiatif ini! Pembangunan tanggul laut sangat krusial untuk mencegah banjir rob di Jakarta Utara.", 24, true),
     Comment(2, "Siti Aminah", "5 jam yang lalu", "Harus dipastikan dampak lingkungan terhadap nelayan sekitar tidak diabaikan.", 56, false),
     Comment(3, "Admin SUARA", "2 jam yang lalu", "Terima kasih atas masukannya. Tim terkait sedang melakukan studi dampak lingkungan lebih lanjut.", 0, true, isAdmin = true)
-)                          
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PolicyScreen(navController: NavController, policyId: String?) {
     val context = LocalContext.current
-    val service = remember { AppwriteService(context) }
+
+    // Inisialisasi ViewModel menggunakan Factory
     val viewModel: PolicyViewModel = viewModel(factory = ViewModelFactory(context))
 
-    // State untuk menampung detail kebijakan yang dicari
-    var selectedPolicy by remember { mutableStateOf<PolicyModel?>(null) }
+    // MENGAMBIL STATE DARI VIEWMODEL (Reactive)
+    val selectedPolicy by viewModel.selectedPolicy.collectAsState()
+    val voteStats by viewModel.voteStats.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
-    // Ambil data detail saat layar dibuka
+    // STATE BARU: Mengambil status vote user saat ini ("setuju", "tidak", atau null)
+    val currentUserVote by viewModel.currentUserVote.collectAsState()
+
+    // Panggil fungsi loadPolicyDetail di ViewModel saat layar dibuka
     LaunchedEffect(policyId) {
         if (policyId != null) {
-            selectedPolicy = service.getPolicyById(policyId)
+            viewModel.loadPolicyDetail(policyId)
         }
     }
 
@@ -88,11 +93,13 @@ fun PolicyScreen(navController: NavController, policyId: String?) {
             CommentInputField()
         }
     ) { paddingValues ->
-        if (selectedPolicy == null) {
+        // Tampilkan Loading jika sedang memuat atau data belum ada
+        if (isLoading || selectedPolicy == null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Color(0xFF1A73E8))
             }
         } else {
+            // Data sudah siap, tampilkan UI
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -109,7 +116,7 @@ fun PolicyScreen(navController: NavController, policyId: String?) {
                 }
                 item { Spacer(modifier = Modifier.height(16.dp)) }
                 item {
-                    // Menampilkan Gambar Kebijakan dari Appwrite Storage
+                    // Menampilkan Gambar Kebijakan
                     AsyncImage(
                         model = selectedPolicy!!.imageUrl,
                         contentDescription = null,
@@ -123,7 +130,24 @@ fun PolicyScreen(navController: NavController, policyId: String?) {
                 item { Spacer(modifier = Modifier.height(24.dp)) }
                 item { PolicyBody(content = selectedPolicy!!.content) }
                 item { Spacer(modifier = Modifier.height(24.dp)) }
-                item { PublicSentiment() }
+
+                // --- UPDATE: Menampilkan Sentimen Publik dengan Interaksi ---
+                item {
+                    PublicSentiment(
+                        totalVotes = voteStats.totalVotes,
+                        agreePercentage = voteStats.agreePercentage,
+                        disagreePercentage = voteStats.disagreePercentage,
+                        userChoice = currentUserVote, // Kirim status pilihan user
+                        onVote = { choice ->
+                            // Kirim aksi vote ke ViewModel
+                            if (policyId != null) {
+                                viewModel.castVote(policyId, choice)
+                            }
+                        }
+                    )
+                }
+                // -----------------------------------------------------------
+
                 item { Spacer(modifier = Modifier.height(24.dp)) }
                 item {
                     Row(
@@ -182,44 +206,112 @@ fun PolicyBody(content: String) {
 }
 
 @Composable
-fun PublicSentiment() {
+fun PublicSentiment(
+    totalVotes: Int,
+    agreePercentage: Int,
+    disagreePercentage: Int,
+    userChoice: String?, // Bisa null, "setuju", atau "tidak"
+    onVote: (String) -> Unit // Callback saat user klik tombol
+) {
+    // Format angka ke format Indonesia (contoh: 1.256)
+    val numberFormat = NumberFormat.getNumberInstance(Locale("id", "ID"))
+    val formattedTotal = numberFormat.format(totalVotes)
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text("Sentimen Publik", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-        Text("Total Dukungan: 1.2k", fontSize = 12.sp, color = Color.Gray)
+        Text("Total Dukungan: $formattedTotal", fontSize = 12.sp, color = Color.Gray)
+
         Spacer(modifier = Modifier.height(16.dp))
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Box(modifier = Modifier.weight(1f)) { SentimentCard(true, 85) }
-            Box(modifier = Modifier.weight(1f)) { SentimentCard(false, 15) }
+            Box(modifier = Modifier.weight(1f)) {
+                SentimentCard(
+                    isAgreement = true,
+                    percentage = agreePercentage,
+                    isSelected = userChoice == "setuju", // Cek apakah ini pilihan user
+                    onClick = { onVote("setuju") }
+                )
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                SentimentCard(
+                    isAgreement = false,
+                    percentage = disagreePercentage,
+                    isSelected = userChoice == "tidak", // Cek apakah ini pilihan user
+                    onClick = { onVote("tidak") }
+                )
+            }
         }
     }
 }
 
 @Composable
-fun SentimentCard(isAgreement: Boolean, percentage: Int) {
-    val backgroundColor = if (isAgreement) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
-    val contentColor = if (isAgreement) Color(0xFF2E7D32) else Color(0xFFC62828)
+fun SentimentCard(
+    isAgreement: Boolean,
+    percentage: Int,
+    isSelected: Boolean, // Status apakah card ini dipilih
+    onClick: () -> Unit // Fungsi klik
+) {
+    // Tentukan Warna Dasar
+    val baseBackgroundColor = if (isAgreement) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
+    val baseContentColor = if (isAgreement) Color(0xFF2E7D32) else Color(0xFFC62828)
+
+    // Tentukan Visual jika Selected (Border tebal & Background sedikit berbeda opsional)
+    val borderColor = if (isSelected) baseContentColor else Color.Transparent
+    val borderWidth = if (isSelected) 2.dp else 0.dp
+
     val icon = if (isAgreement) Icons.Outlined.ThumbUp else Icons.Outlined.ThumbDown
 
     Card(
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        colors = CardDefaults.cardColors(containerColor = baseBackgroundColor),
+        border = BorderStroke(borderWidth, borderColor), // Tambahkan Border Stroke
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() } // Jadikan card bisa diklik
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(icon, contentDescription = null, tint = contentColor)
+            Icon(icon, contentDescription = null, tint = baseContentColor)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(if (isAgreement) "Setuju" else "Tidak", color = contentColor, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            Text("$percentage%", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = contentColor)
+            Text(
+                if (isAgreement) "Setuju" else "Tidak",
+                color = baseContentColor,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp
+            )
+            Text(
+                "$percentage%",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = baseContentColor
+            )
+
+            // Indikator teks kecil jika terpilih (Feedback Visual Tambahan)
+            if (isSelected) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Surface(
+                    color = baseContentColor,
+                    shape = RoundedCornerShape(4.dp)
+                ) {
+                    Text(
+                        "Pilihanmu",
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
         }
     }
 }
-
-// ... Sisanya (CommentItem & CommentInputField) tetap sama seperti sebelumnya ...
 
 @Composable
 fun CommentItem(comment: Comment) {
