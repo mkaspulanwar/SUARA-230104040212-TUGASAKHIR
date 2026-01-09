@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.ThumbDown
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.*
@@ -26,7 +27,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import id.antasari.suara_230104040212_tugasakhir.data.remote.AppwriteService
 import id.antasari.suara_230104040212_tugasakhir.ui.factory.ViewModelFactory
 import id.antasari.suara_230104040212_tugasakhir.ui.viewmodel.PolicyViewModel
 import java.text.NumberFormat
@@ -62,7 +62,7 @@ fun PolicyScreen(navController: NavController, policyId: String?) {
     val voteStats by viewModel.voteStats.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
 
-    // STATE BARU: Mengambil status vote user saat ini ("setuju", "tidak", atau null)
+    // Mengambil status vote user saat ini ("setuju", "tidak", atau null)
     val currentUserVote by viewModel.currentUserVote.collectAsState()
 
     // Panggil fungsi loadPolicyDetail di ViewModel saat layar dibuka
@@ -131,15 +131,12 @@ fun PolicyScreen(navController: NavController, policyId: String?) {
                 item { PolicyBody(content = selectedPolicy!!.content) }
                 item { Spacer(modifier = Modifier.height(24.dp)) }
 
-                // --- UPDATE: Menampilkan Sentimen Publik dengan Interaksi ---
+                // --- UPDATE: Menampilkan Sentimen Publik ---
                 item {
                     PublicSentiment(
-                        totalVotes = voteStats.totalVotes,
-                        agreePercentage = voteStats.agreePercentage,
-                        disagreePercentage = voteStats.disagreePercentage,
-                        userChoice = currentUserVote, // Kirim status pilihan user
+                        voteStats = voteStats,
+                        userChoice = currentUserVote,
                         onVote = { choice ->
-                            // Kirim aksi vote ke ViewModel
                             if (policyId != null) {
                                 viewModel.castVote(policyId, choice)
                             }
@@ -207,39 +204,40 @@ fun PolicyBody(content: String) {
 
 @Composable
 fun PublicSentiment(
-    totalVotes: Int,
-    agreePercentage: Int,
-    disagreePercentage: Int,
-    userChoice: String?, // Bisa null, "setuju", atau "tidak"
-    onVote: (String) -> Unit // Callback saat user klik tombol
+    voteStats: PolicyViewModel.VoteStats,
+    userChoice: String?,
+    onVote: (String) -> Unit
 ) {
-    // Format angka ke format Indonesia (contoh: 1.256)
     val numberFormat = NumberFormat.getNumberInstance(Locale("id", "ID"))
-    val formattedTotal = numberFormat.format(totalVotes)
+    val formattedTotal = numberFormat.format(voteStats.totalVotes)
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text("Sentimen Publik", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-        Text("Total Dukungan: $formattedTotal", fontSize = 12.sp, color = Color.Gray)
+        Text("Total Partisipasi: $formattedTotal Suara", fontSize = 12.sp, color = Color.Gray)
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Box(modifier = Modifier.weight(1f)) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 SentimentCard(
                     isAgreement = true,
-                    percentage = agreePercentage,
-                    isSelected = userChoice == "setuju", // Cek apakah ini pilihan user
+                    count = voteStats.agreeCount,
+                    percentage = voteStats.agreePercentage,
+                    isSelected = userChoice == "setuju",
                     onClick = { onVote("setuju") }
                 )
             }
-            Box(modifier = Modifier.weight(1f)) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                 SentimentCard(
                     isAgreement = false,
-                    percentage = disagreePercentage,
-                    isSelected = userChoice == "tidak", // Cek apakah ini pilihan user
+                    count = voteStats.disagreeCount,
+                    percentage = voteStats.disagreePercentage,
+                    isSelected = userChoice == "tidak",
                     onClick = { onVote("tidak") }
                 )
             }
@@ -250,63 +248,99 @@ fun PublicSentiment(
 @Composable
 fun SentimentCard(
     isAgreement: Boolean,
+    count: Int,
     percentage: Int,
-    isSelected: Boolean, // Status apakah card ini dipilih
-    onClick: () -> Unit // Fungsi klik
+    isSelected: Boolean,
+    onClick: () -> Unit
 ) {
-    // Tentukan Warna Dasar
+    // Warna Dasar
     val baseBackgroundColor = if (isAgreement) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
     val baseContentColor = if (isAgreement) Color(0xFF2E7D32) else Color(0xFFC62828)
 
-    // Tentukan Visual jika Selected (Border tebal & Background sedikit berbeda opsional)
+    // Warna Border
     val borderColor = if (isSelected) baseContentColor else Color.Transparent
     val borderWidth = if (isSelected) 2.dp else 0.dp
 
     val icon = if (isAgreement) Icons.Outlined.ThumbUp else Icons.Outlined.ThumbDown
+    val label = if (isAgreement) "Setuju" else "Tidak Setuju"
+
+    val numberFormat = NumberFormat.getNumberInstance(Locale("id", "ID"))
 
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = baseBackgroundColor),
-        border = BorderStroke(borderWidth, borderColor), // Tambahkan Border Stroke
+        border = BorderStroke(borderWidth, borderColor),
         modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() } // Jadikan card bisa diklik
+            .fillMaxSize()
+            .clickable { onClick() }
     ) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(icon, contentDescription = null, tint = baseContentColor)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                if (isAgreement) "Setuju" else "Tidak",
-                color = baseContentColor,
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.sp
-            )
-            Text(
-                "$percentage%",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = baseContentColor
-            )
+        // Box Utama
+        Box(modifier = Modifier.fillMaxSize()) {
 
-            // Indikator teks kecil jika terpilih (Feedback Visual Tambahan)
-            if (isSelected) {
+            // 1. KONTEN UTAMA (Icon, Persen, Jumlah)
+            // PERBAIKAN: Mengatur padding top lebih besar agar konten turun ke bawah
+            // dan tidak tertutup oleh badge di pojok kanan atas.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    // Padding top diperbesar (36.dp) untuk memberi ruang pada badge
+                    .padding(top = 36.dp, bottom = 16.dp, start = 8.dp, end = 8.dp)
+                    .align(Alignment.Center), // Tetap di tengah secara vertikal (setelah padding)
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(icon, contentDescription = null, tint = baseContentColor, modifier = Modifier.size(28.dp))
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(label, color = baseContentColor, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+
+                Text(
+                    "$percentage%",
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = baseContentColor
+                )
+
                 Spacer(modifier = Modifier.height(4.dp))
                 Surface(
-                    color = baseContentColor,
+                    color = baseContentColor.copy(alpha = 0.1f),
                     shape = RoundedCornerShape(4.dp)
                 ) {
                     Text(
-                        "Pilihanmu",
-                        color = Color.White,
+                        "${numberFormat.format(count)} Suara",
                         fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
+                        color = baseContentColor,
+                        fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
+                }
+            }
+
+            // 2. BADGE "PILIHANMU" (Overlay di Pojok Kanan Atas)
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .background(
+                            color = baseContentColor,
+                            shape = RoundedCornerShape(bottomStart = 12.dp)
+                        )
+                        .padding(horizontal = 10.dp, vertical = 5.dp) // Sedikit penyesuaian padding
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Outlined.CheckCircle,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            "Pilihanmu",
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }

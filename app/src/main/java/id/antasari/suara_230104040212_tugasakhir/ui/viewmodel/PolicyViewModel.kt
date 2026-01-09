@@ -36,9 +36,11 @@ class PolicyViewModel(private val service: AppwriteService) : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    // Data Class untuk statistik
+    // UPDATE: Data Class sekarang menampung detail jumlah suara (Count)
     data class VoteStats(
         val totalVotes: Int = 0,
+        val agreeCount: Int = 0,      // Tambahan: Jumlah spesifik yang setuju
+        val disagreeCount: Int = 0,   // Tambahan: Jumlah spesifik yang tidak setuju
         val agreePercentage: Int = 0,
         val disagreePercentage: Int = 0
     )
@@ -47,7 +49,7 @@ class PolicyViewModel(private val service: AppwriteService) : ViewModel() {
     private val _voteStats = MutableStateFlow(VoteStats())
     val voteStats: StateFlow<VoteStats> = _voteStats
 
-    // STATE BARU: Menyimpan pilihan user saat ini (null, "setuju", atau "tidak")
+    // Menyimpan pilihan user saat ini (null, "setuju", atau "tidak")
     private val _currentUserVote = MutableStateFlow<String?>(null)
     val currentUserVote: StateFlow<String?> = _currentUserVote
 
@@ -61,14 +63,14 @@ class PolicyViewModel(private val service: AppwriteService) : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // 1. Ambil User ID dulu (untuk cek dia sudah vote atau belum)
+                // 1. Ambil User ID dulu
                 currentUserId = service.getCurrentUserId()
 
                 // 2. Ambil Detail Kebijakan
                 val policy = service.getPolicyById(policyId)
                 _selectedPolicy.value = policy
 
-                // 3. Jika kebijakan ada, hitung statistik dan cek pilihan user
+                // 3. Jika kebijakan ada, hitung statistik
                 if (policy != null) {
                     refreshVoteData(policyId)
                 }
@@ -82,64 +84,67 @@ class PolicyViewModel(private val service: AppwriteService) : ViewModel() {
 
     /**
      * Fungsi untuk menghitung ulang statistik dan mengecek pilihan user.
-     * Dipisahkan agar bisa dipanggil ulang setelah user melakukan vote.
      */
     private suspend fun refreshVoteData(policyId: String) {
         // Ambil semua data vote untuk kebijakan ini
         val votesList = service.getVotesByPolicy(policyId)
         val total = votesList.size
 
-        // A. Hitung Statistik Global (Persentase)
+        // A. Hitung Statistik Global
         if (total > 0) {
+            // Hitung yang setuju
             val agreeCount = votesList.count {
                 val status = it["status"].toString().lowercase()
                 status == "setuju" || status == "agree"
             }
+
+            // Sisanya adalah tidak setuju
             val disagreeCount = total - agreeCount
 
+            // Hitung Persentase
             val agreePercent = ((agreeCount.toDouble() / total) * 100).toInt()
             val disagreePercent = ((disagreeCount.toDouble() / total) * 100).toInt()
 
-            _voteStats.value = VoteStats(total, agreePercent, disagreePercent)
+            // Update State dengan data lengkap (Total, Count, & Percentage)
+            _voteStats.value = VoteStats(
+                totalVotes = total,
+                agreeCount = agreeCount,
+                disagreeCount = disagreeCount,
+                agreePercentage = agreePercent,
+                disagreePercentage = disagreePercent
+            )
         } else {
-            _voteStats.value = VoteStats(0, 0, 0)
+            // Jika belum ada vote, semua nol
+            _voteStats.value = VoteStats()
         }
 
         // B. Cek Pilihan User Saat Ini (Agar tombol bisa menyala)
         if (currentUserId != null) {
-            // Cari apakah ID User kita ada di daftar vote tersebut
             val myVote = votesList.find { it["user_id"] == currentUserId }
-
             if (myVote != null) {
-                // Jika ketemu, simpan statusnya ("setuju"/"tidak") ke state
                 _currentUserVote.value = myVote["status"].toString().lowercase()
             } else {
-                // Jika tidak ketemu, berarti belum vote
                 _currentUserVote.value = null
             }
         }
     }
 
     /**
-     * BARU: Fungsi yang dipanggil saat user mengklik tombol Vote
+     * Fungsi yang dipanggil saat user mengklik tombol Vote
      */
     fun castVote(policyId: String, status: String) {
         viewModelScope.launch {
-            // Guard: Jika user belum login, tidak bisa vote (bisa ditambah navigasi ke login)
             if (currentUserId == null) return@launch
 
-            // 1. Optimistic Update: Ubah UI duluan biar terasa cepat (Instan)
+            // 1. Optimistic Update (Ubah UI instan)
             _currentUserVote.value = status
 
-            // 2. Kirim data ke Server Appwrite
+            // 2. Kirim ke Server
             val success = service.submitVote(policyId, currentUserId!!, status)
 
-            // 3. Jika berhasil, refresh data statistik agar persentase berubah real-time
+            // 3. Refresh data statistik jika sukses
             if (success) {
                 refreshVoteData(policyId)
-            } else {
-                // Jika gagal, bisa ditambahkan logic rollback atau pesan error
-                // _currentUserVote.value = null (opsional)
             }
         }
     }
