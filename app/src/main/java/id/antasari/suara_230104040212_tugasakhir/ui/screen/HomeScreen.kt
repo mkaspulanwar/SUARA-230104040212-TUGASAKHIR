@@ -1,7 +1,9 @@
 package id.antasari.suara_230104040212_tugasakhir.ui.screen
 
+import androidx.compose.foundation.BorderStroke // <-- INI YANG KURANG TADI
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -130,13 +132,13 @@ fun HomeScreen(navController: NavController) {
     ) { paddingValues ->
         if (viewModel.policies.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = PrimaryBlue) // Update Warna
+                CircularProgressIndicator(color = PrimaryBlue)
             }
         } else {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFFF8F9FA)) // Background sedikit abu agar kartu putih terlihat
+                    .background(Color(0xFFF8F9FA))
                     .padding(paddingValues)
             ) {
                 item { Spacer(modifier = Modifier.height(12.dp)) }
@@ -162,7 +164,7 @@ fun NewsCard(policy: PolicyModel, onClick: () -> Unit) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = BackgroundWhite), // Update Warna
+        colors = CardDefaults.cardColors(containerColor = BackgroundWhite),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
@@ -174,7 +176,7 @@ fun NewsCard(policy: PolicyModel, onClick: () -> Unit) {
                         text = policy.institution,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = PrimaryBlue // Update Warna
+                        color = PrimaryBlue
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -214,7 +216,7 @@ fun NewsCard(policy: PolicyModel, onClick: () -> Unit) {
                 LinearProgressIndicator(
                     progress = { policy.agreePercentage / 100f },
                     modifier = Modifier.weight(1f).height(6.dp).clip(CircleShape),
-                    color = PrimaryBlue, // Update Warna
+                    color = PrimaryBlue,
                     trackColor = Color(0xFFE8EAED),
                 )
                 Spacer(modifier = Modifier.width(12.dp))
@@ -243,28 +245,38 @@ fun NewsCard(policy: PolicyModel, onClick: () -> Unit) {
     }
 }
 
+// --- FILTER SECTION (OUTLINE STYLE) ---
 @Composable
 fun FilterSection() {
     val categories = listOf("Semua", "Pendidikan", "Kesehatan", "Ekonomi", "Lingkungan", "Infrastruktur")
     var selected by remember { mutableStateOf(0) }
 
+    val unselectedBorderColor = Color(0xFFE0E0E0) // Warna border abu-abu
+
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth().background(BackgroundWhite) // Update Warna
+        modifier = Modifier.fillMaxWidth().background(BackgroundWhite)
     ) {
         itemsIndexed(categories) { index, title ->
             val isSelected = selected == index
+
+            val borderColor = if (isSelected) PrimaryBlue else unselectedBorderColor
+            val textColor = if (isSelected) PrimaryBlue else Color.Gray
+
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .background(if (isSelected) PrimaryBlue else Color(0xFFF1F3F4)) // Update Warna
+                    .border(
+                        BorderStroke(1.dp, borderColor), // Outline biru atau abu
+                        shape = RoundedCornerShape(8.dp)
+                    )
                     .clickable { selected = index }
                     .padding(horizontal = 16.dp, vertical = 6.dp)
             ) {
                 Text(
                     text = title,
-                    color = if (isSelected) Color.White else Color.DarkGray,
+                    color = textColor,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium
                 )
