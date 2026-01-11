@@ -18,12 +18,52 @@ class PolicyViewModel(private val service: AppwriteService) : ViewModel() {
     // ==========================================
     val policies = mutableStateListOf<PolicyModel>()
 
+    /**
+     * Mengambil daftar kebijakan DAN melengkapinya dengan data statistik
+     * (Total Vote, Persentase Setuju, Jumlah Komentar) untuk Home Screen
+     */
     fun fetchPolicies() {
         viewModelScope.launch {
             try {
-                val list = service.getAllPolicies()
+                // 1. Ambil List Kebijakan Dasar dari Appwrite
+                val rawList = service.getAllPolicies()
+
+                // 2. Loop setiap kebijakan untuk mengambil data statistik (Enrichment)
+                val enrichedList = rawList.map { policy ->
+
+                    // A. Ambil Data Vote untuk kebijakan ini
+                    val votes = service.getVotesByPolicy(policy.id)
+                    val totalV = votes.size
+
+                    // Hitung yang setuju
+                    val agreeCount = votes.count {
+                        val status = it["status"].toString().lowercase()
+                        status == "setuju" || status == "agree"
+                    }
+
+                    // Hitung Persentase
+                    val percent = if (totalV > 0) {
+                        ((agreeCount.toDouble() / totalV) * 100).toInt()
+                    } else {
+                        0
+                    }
+
+                    // B. Ambil Data Komentar untuk menghitung jumlahnya
+                    val comments = service.getComments(policy.id)
+                    val totalC = comments.size
+
+                    // C. Masukkan data statistik ke dalam object PolicyModel
+                    policy.apply {
+                        this.totalVotes = totalV
+                        this.agreePercentage = percent
+                        this.totalComments = totalC
+                    }
+                }
+
+                // 3. Update State List agar UI berubah
                 policies.clear()
-                policies.addAll(list)
+                policies.addAll(enrichedList)
+
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -31,7 +71,7 @@ class PolicyViewModel(private val service: AppwriteService) : ViewModel() {
     }
 
     // ==========================================
-    // BAGIAN 2: DETAIL & VOTING
+    // BAGIAN 2: DETAIL & VOTING (Detail Screen)
     // ==========================================
 
     // State untuk menampung Detail Kebijakan
@@ -82,7 +122,7 @@ class PolicyViewModel(private val service: AppwriteService) : ViewModel() {
     val isPostingComment: StateFlow<Boolean> = _isPostingComment.asStateFlow()
 
     // ==========================================
-    // LOGIC UTAMA
+    // LOGIC UTAMA (Detail Screen)
     // ==========================================
 
     /**
@@ -97,8 +137,7 @@ class PolicyViewModel(private val service: AppwriteService) : ViewModel() {
                     currentUserId = service.getCurrentUserId()
                 }
 
-                // 2. PERBAIKAN: Ambil Nama User Asli (Menggunakan Email)
-                // Panggil fungsi service yang baru kita update
+                // 2. Ambil Nama User Asli (Menggunakan Email dari Service)
                 currentUserName = service.getCurrentUserName()
 
                 // 3. Ambil Detail Kebijakan

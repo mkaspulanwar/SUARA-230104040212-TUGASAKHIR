@@ -37,16 +37,38 @@ import id.antasari.suara_230104040212_tugasakhir.ui.factory.ViewModelFactory
 import java.text.SimpleDateFormat
 import java.util.*
 
+// --- WARNA KONSISTEN ---
+val PrimaryBlue = Color(0xFF1C74E9) // Warna Biru Utama (#1c74e9)
+val BackgroundWhite = Color(0xFFFFFFFF) // Warna Putih (#ffffff)
+
+// --- HELPER FUNCTIONS ---
+
+// 1. Format Tanggal
 fun formatAppwriteDate(isoDate: String): String {
     return try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.getDefault())
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+        inputFormat.timeZone = TimeZone.getTimeZone("UTC")
+
         val date = inputFormat.parse(isoDate)
+
         val outputFormat = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID"))
+        outputFormat.timeZone = TimeZone.getDefault()
+
         outputFormat.format(date ?: Date())
     } catch (e: Exception) {
-        isoDate
+        if(isoDate.length >= 10) isoDate.take(10) else isoDate
     }
 }
+
+// 2. Format Angka (1200 -> 1.2rb)
+fun formatCount(count: Int): String {
+    return when {
+        count >= 1000 -> String.format(Locale.US, "%.1frb", count / 1000.0)
+        else -> count.toString()
+    }
+}
+
+// --- MAIN SCREEN ---
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,9 +84,8 @@ fun HomeScreen(navController: NavController) {
 
     Scaffold(
         topBar = {
-            Surface(shadowElevation = 3.dp) {
-                Column(modifier = Modifier.background(Color.White)) {
-                    // MENGGUNAKAN CenterAlignedTopAppBar AGAR LOGO BENAR-BENAR DI TENGAH
+            Surface(shadowElevation = 3.dp, color = BackgroundWhite) {
+                Column(modifier = Modifier.background(BackgroundWhite)) {
                     CenterAlignedTopAppBar(
                         modifier = Modifier.statusBarsPadding(),
                         navigationIcon = {
@@ -80,7 +101,6 @@ fun HomeScreen(navController: NavController) {
                             )
                         },
                         title = {
-                            // Logo sekarang akan otomatis berada di tengah layar
                             Image(
                                 painter = painterResource(id = R.drawable.logo_horizontal_bluenobg),
                                 contentDescription = "Logo",
@@ -90,14 +110,14 @@ fun HomeScreen(navController: NavController) {
                         },
                         actions = {
                             IconButton(onClick = { navController.navigate(Screen.Notification.route) }) {
-                                Icon(Icons.Outlined.Notifications, contentDescription = null)
+                                Icon(Icons.Outlined.Notifications, contentDescription = null, tint = Color.Gray)
                             }
                             IconButton(onClick = { }) {
-                                Icon(Icons.Outlined.BookmarkBorder, contentDescription = null)
+                                Icon(Icons.Outlined.BookmarkBorder, contentDescription = null, tint = Color.Gray)
                             }
                         },
                         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                            containerColor = Color.White
+                            containerColor = BackgroundWhite
                         )
                     )
                     FilterSection()
@@ -105,19 +125,18 @@ fun HomeScreen(navController: NavController) {
             }
         },
         bottomBar = {
-            // Pastikan komponen ini sudah Anda buat/import
             BottomNavigationBar(navController = navController)
         }
     ) { paddingValues ->
         if (viewModel.policies.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Color(0xFF1A73E8))
+                CircularProgressIndicator(color = PrimaryBlue) // Update Warna
             }
         } else {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFFF8F9FA))
+                    .background(Color(0xFFF8F9FA)) // Background sedikit abu agar kartu putih terlihat
                     .padding(paddingValues)
             ) {
                 item { Spacer(modifier = Modifier.height(12.dp)) }
@@ -143,25 +162,28 @@ fun NewsCard(policy: PolicyModel, onClick: () -> Unit) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = BackgroundWhite), // Update Warna
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            // --- HEADER CARD ---
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = policy.institution,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1A73E8)
+                        color = PrimaryBlue // Update Warna
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = policy.title,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        lineHeight = 22.sp
+                        lineHeight = 22.sp,
+                        maxLines = 3,
+                        color = Color.Black
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -184,25 +206,36 @@ fun NewsCard(policy: PolicyModel, onClick: () -> Unit) {
                     contentScale = ContentScale.Crop
                 )
             }
+
             Spacer(modifier = Modifier.height(14.dp))
+
+            // --- PROGRESS BAR ---
             Row(verticalAlignment = Alignment.CenterVertically) {
                 LinearProgressIndicator(
-                    progress = { 0.75f },
+                    progress = { policy.agreePercentage / 100f },
                     modifier = Modifier.weight(1f).height(6.dp).clip(CircleShape),
-                    color = Color(0xFF1A73E8),
-                    trackColor = Color(0xFFE8EAED)
+                    color = PrimaryBlue, // Update Warna
+                    trackColor = Color(0xFFE8EAED),
                 )
                 Spacer(modifier = Modifier.width(12.dp))
-                Text("75% Setuju", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
+                Text(
+                    "${policy.agreePercentage}% Setuju",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.Gray
+                )
             }
+
             Spacer(modifier = Modifier.height(14.dp))
             HorizontalDivider(color = Color(0xFFF1F3F4))
+
+            // --- ACTION BUTTONS ---
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                ActionItem(Icons.Outlined.ThumbUp, "1.1rb")
-                ActionItem(Icons.Outlined.ChatBubbleOutline, "24")
+                ActionItem(Icons.Outlined.ThumbUp, formatCount(policy.totalVotes))
+                ActionItem(Icons.Outlined.ChatBubbleOutline, formatCount(policy.totalComments))
                 ActionItem(Icons.Outlined.Share, "Bagikan")
                 ActionItem(Icons.Outlined.BookmarkBorder, "Simpan")
             }
@@ -212,19 +245,20 @@ fun NewsCard(policy: PolicyModel, onClick: () -> Unit) {
 
 @Composable
 fun FilterSection() {
-    val categories = listOf("Semua", "Pendidikan", "Kesehatan", "Ekonomi", "Lingkungan")
+    val categories = listOf("Semua", "Pendidikan", "Kesehatan", "Ekonomi", "Lingkungan", "Infrastruktur")
     var selected by remember { mutableStateOf(0) }
+
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth().background(Color.White)
+        modifier = Modifier.fillMaxWidth().background(BackgroundWhite) // Update Warna
     ) {
         itemsIndexed(categories) { index, title ->
             val isSelected = selected == index
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .background(if (isSelected) Color(0xFF1A73E8) else Color(0xFFF1F3F4))
+                    .background(if (isSelected) PrimaryBlue else Color(0xFFF1F3F4)) // Update Warna
                     .clickable { selected = index }
                     .padding(horizontal = 16.dp, vertical = 6.dp)
             ) {
