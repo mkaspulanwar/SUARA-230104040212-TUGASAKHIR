@@ -1,24 +1,35 @@
 package id.antasari.suara_230104040212_tugasakhir.ui.screen
 
+import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.HeadsetMic
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -28,57 +39,65 @@ import id.antasari.suara_230104040212_tugasakhir.navigation.Screen
 import id.antasari.suara_230104040212_tugasakhir.ui.factory.ViewModelFactory
 import id.antasari.suara_230104040212_tugasakhir.ui.viewmodel.SettingViewModel
 
+// --- VARIABEL WARNA LOKAL ---
+private val SettingBlue = Color(0xFF1C74E9)
+private val SettingBackground = Color(0xFFF8F9FA)
+private val SettingTextBlack = Color(0xFF1F2937)
+private val SettingGrayText = Color(0xFF6B7280)
+private val SettingRed = Color(0xFFDC2626)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(navController: NavController) { // Nama fungsi disesuaikan dengan kodingan Anda
+fun SettingsScreen(navController: NavController) {
     val context = LocalContext.current
 
     // 1. Inisialisasi ViewModel
-    val viewModel: SettingViewModel = viewModel(
-        factory = ViewModelFactory(context)
-    )
+    val viewModel: SettingViewModel = viewModel(factory = ViewModelFactory(context))
 
-    // 2. Pantau State Logout
+    // 2. Pantau State Data User
+    val userName by viewModel.userName.collectAsState()
+    val userNik by viewModel.userNik.collectAsState()
     val isLoggedOut by viewModel.isLoggedOut.collectAsState()
 
-    // 3. Efek Navigasi saat Logout Berhasil
+    // 3. Ambil data saat layar dibuka
+    LaunchedEffect(Unit) {
+        viewModel.fetchUserProfile()
+    }
+
+    // 4. Efek Navigasi saat Logout
     LaunchedEffect(isLoggedOut) {
         if (isLoggedOut) {
-            // Arahkan ke Login
             navController.navigate(Screen.Login.route) {
-                // Hapus semua history backstack agar tidak bisa kembali ke profil
                 popUpTo(0) { inclusive = true }
                 launchSingleTop = true
             }
-            // Reset state di ViewModel (opsional)
             viewModel.resetState()
         }
     }
 
     var showLogoutDialog by remember { mutableStateOf(false) }
 
+    // Dialog Konfirmasi Logout
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            title = { Text("Konfirmasi Keluar") },
-            text = { Text("Apakah Anda yakin ingin keluar dari aplikasi?") },
+            containerColor = Color.White,
+            title = { Text("Konfirmasi Log Out", fontWeight = FontWeight.Bold) },
+            text = { Text("Apakah Anda yakin ingin keluar dari akun ini?") },
             confirmButton = {
                 Button(
                     onClick = {
-                        // 4. Panggil Fungsi Logout di ViewModel
                         viewModel.logout()
                         showLogoutDialog = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                    colors = ButtonDefaults.buttonColors(containerColor = SettingRed)
                 ) {
-                    Text("Ya, Keluar", color = Color.White)
+                    Text("Ya, Log Out", color = Color.White)
                 }
             },
             dismissButton = {
-                OutlinedButton(
-                    onClick = { showLogoutDialog = false }
-                ) {
-                    Text("Batal")
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Batal", color = SettingTextBlack)
                 }
             }
         )
@@ -86,12 +105,30 @@ fun SettingsScreen(navController: NavController) { // Nama fungsi disesuaikan de
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                modifier = Modifier.statusBarsPadding(),
-                title = { Text("Profil & Pengaturan", fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
-                )
+            // --- TOP BAR (Center Aligned) ---
+            CenterAlignedTopAppBar(
+                modifier = Modifier.shadow(elevation = 1.dp),
+                title = {
+                    Text(
+                        "Pengaturan",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        color = SettingTextBlack
+                    )
+                },
+                actions = {
+                    // Icon Headset (Support) di Kanan
+                    IconButton(onClick = {
+                        Toast.makeText(context, "Layanan Support", Toast.LENGTH_SHORT).show()
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.HeadsetMic,
+                            contentDescription = "Support",
+                            tint = Color.Gray
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White)
             )
         },
         bottomBar = {
@@ -101,98 +138,210 @@ fun SettingsScreen(navController: NavController) { // Nama fungsi disesuaikan de
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(SettingBackground)
                 .padding(paddingValues)
-                .background(Color(0xFFF5F5F5))
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .verticalScroll(rememberScrollState())
         ) {
+
+            // --- HEADER PROFIL ---
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White)
+                    .padding(vertical = 24.dp, horizontal = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Image(
+                        painter = painterResource(id = R.drawable.profile),
+                        contentDescription = "Avatar",
+                        modifier = Modifier
+                            .size(90.dp)
+                            .clip(CircleShape)
+                            .border(2.dp, SettingBlue.copy(alpha = 0.2f), CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Nama User
+                    Text(
+                        text = userName,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = SettingTextBlack,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // --- BADGE NIK ---
+                    Surface(
+                        color = Color(0xFFF3F4F6),
+                        shape = RoundedCornerShape(20.dp),
+                        border = null
+                    ) {
+                        Text(
+                            text = "NIK: $userNik",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = SettingGrayText,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Avatar Profile
-            Image(
-                painter = painterResource(id = R.drawable.profile),
-                contentDescription = "Avatar",
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(CircleShape)
-                    .border(3.dp, Color(0xFFE3F2FD), CircleShape)
-            )
+            // --- MENU GROUP 1: AKUN ---
+            SectionTitle(title = "Pengaturan Akun")
 
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("M. Kaspul Anwar", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Text("NIK: 3201**********", fontSize = 14.sp, color = Color.Gray)
+            Card(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
+            ) {
+                Column {
+                    SettingsMenuTile(
+                        icon = Icons.Outlined.Person,
+                        title = "Edit Profil",
+                        onClick = {}
+                    )
+                    SettingsDivider()
+                    SettingsMenuTile(
+                        icon = Icons.Outlined.Lock,
+                        title = "Keamanan & Password",
+                        onClick = {}
+                    )
+                    SettingsDivider()
+                    SettingsMenuTile(
+                        icon = Icons.Outlined.Palette,
+                        title = "Tampilan",
+                        onClick = {}
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // --- MENU GROUP 2: LAINNYA ---
+            SectionTitle(title = "Lainnya")
+
+            Card(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.5.dp)
+            ) {
+                Column {
+                    // "Pusat Bantuan" DIHAPUS
+                    SettingsMenuTile(
+                        icon = Icons.Filled.Info,
+                        title = "Tentang Aplikasi",
+                        onClick = {}
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Menu Group 1
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column {
-                    SettingsItem(icon = Icons.Default.Edit, text = "Edit Profil", onClick = { /* navController.navigate(Screen.EditProfile.route) */ })
-                    Divider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF0F0F0))
-                    SettingsItem(icon = Icons.Default.Notifications, text = "Notifikasi")
-                    Divider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF0F0F0))
-                    SettingsItem(icon = Icons.Default.Security, text = "Keamanan")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Menu Group 2
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column {
-                    SettingsItem(icon = Icons.Default.Help, text = "Pusat Bantuan")
-                    Divider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF0F0F0))
-                    SettingsItem(icon = Icons.Default.Info, text = "Tentang Aplikasi")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Tombol Logout
-            Button(
+            // --- TOMBOL LOG OUT ---
+            OutlinedButton(
                 onClick = { showLogoutDialog = true },
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .height(50.dp),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, SettingRed),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    containerColor = Color.Transparent,
+                    contentColor = SettingRed
+                )
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Logout, contentDescription = "Logout", tint = Color.Red)
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Logout,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Keluar", color = Color.Red, fontWeight = FontWeight.Bold)
+                    Text("Log Out", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             }
+
+            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }
 
+// --- HELPER COMPONENTS ---
+
 @Composable
-fun SettingsItem(icon: ImageVector, text: String, onClick: () -> Unit = {}) {
+fun SectionTitle(title: String) {
+    Text(
+        text = title,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = SettingGrayText,
+        modifier = Modifier.padding(start = 20.dp, bottom = 8.dp)
+    )
+}
+
+@Composable
+fun SettingsDivider() {
+    HorizontalDivider(
+        color = Color(0xFFF1F5F9),
+        thickness = 1.dp,
+        modifier = Modifier.padding(horizontal = 16.dp)
+    )
+}
+
+@Composable
+fun SettingsMenuTile(
+    icon: ImageVector,
+    title: String,
+    onClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = text,
+        // Icon Box
+        Box(
             modifier = Modifier
-                .size(40.dp)
-                .background(Color(0xFFE3F2FD), shape = RoundedCornerShape(8.dp))
-                .padding(8.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
+                .size(36.dp)
+                .background(SettingBlue.copy(alpha = 0.1f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = SettingBlue,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
         Spacer(modifier = Modifier.width(16.dp))
-        Text(text, fontSize = 16.sp, modifier = Modifier.weight(1f))
-        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
+
+        Text(
+            text = title,
+            fontSize = 15.sp,
+            color = SettingTextBlack,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f)
+        )
+
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+            contentDescription = null,
+            tint = Color(0xFFD1D5DB),
+            modifier = Modifier.size(14.dp)
+        )
     }
 }
