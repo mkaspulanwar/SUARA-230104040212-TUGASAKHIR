@@ -31,7 +31,9 @@ import id.antasari.suara_230104040212_tugasakhir.data.model.PolicyComment
 import id.antasari.suara_230104040212_tugasakhir.ui.factory.ViewModelFactory
 import id.antasari.suara_230104040212_tugasakhir.ui.viewmodel.PolicyViewModel
 import java.text.NumberFormat
+import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.TimeZone
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,7 +43,7 @@ fun PolicyScreen(navController: NavController, policyId: String?) {
     // Inisialisasi ViewModel menggunakan Factory
     val viewModel: PolicyViewModel = viewModel(factory = ViewModelFactory(context))
 
-    // --- STATE DARI VIEWMODEL (Reactive) ---
+    // --- STATE DARI VIEWMODEL ---
     val selectedPolicy by viewModel.selectedPolicy.collectAsState()
     val voteStats by viewModel.voteStats.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -52,7 +54,7 @@ fun PolicyScreen(navController: NavController, policyId: String?) {
     val commentText by viewModel.commentText.collectAsState()
     val isPosting by viewModel.isPostingComment.collectAsState()
 
-    // Panggil fungsi loadPolicyDetail di ViewModel saat layar dibuka
+    // Load data saat layar dibuka
     LaunchedEffect(policyId) {
         if (policyId != null) {
             viewModel.loadPolicyDetail(policyId)
@@ -60,10 +62,7 @@ fun PolicyScreen(navController: NavController, policyId: String?) {
     }
 
     Scaffold(
-        // --- PERBAIKAN 1: Mencegah Header tertutup Notch/Status Bar ---
         contentWindowInsets = WindowInsets.statusBars,
-        // -------------------------------------------------------------
-
         topBar = {
             TopAppBar(
                 title = { Text("Detail Kebijakan", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
@@ -81,7 +80,6 @@ fun PolicyScreen(navController: NavController, policyId: String?) {
             )
         },
         bottomBar = {
-            // --- PERBAIKAN 2: Handle Keyboard agar input naik (imePadding) ---
             Box(modifier = Modifier.imePadding()) {
                 CommentInputField(
                     value = commentText,
@@ -96,27 +94,28 @@ fun PolicyScreen(navController: NavController, policyId: String?) {
             }
         }
     ) { paddingValues ->
-        // Tampilkan Loading jika sedang memuat atau data belum ada
         if (isLoading || selectedPolicy == null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Color(0xFF1A73E8))
             }
         } else {
-            // Data sudah siap, tampilkan UI
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues) // Padding otomatis dari Scaffold (penting!)
+                    .padding(paddingValues)
                     .background(Color.White)
                     .padding(16.dp)
             ) {
+                // --- BAGIAN HEADER ---
                 item {
                     PolicyHeader(
                         institution = selectedPolicy!!.institution,
                         date = selectedPolicy!!.createdAt,
-                        title = selectedPolicy!!.title
+                        title = selectedPolicy!!.title,
+                        category = selectedPolicy!!.category // Mengambil kategori dari DB
                     )
                 }
+
                 item { Spacer(modifier = Modifier.height(16.dp)) }
                 item {
                     AsyncImage(
@@ -133,7 +132,7 @@ fun PolicyScreen(navController: NavController, policyId: String?) {
                 item { PolicyBody(content = selectedPolicy!!.content) }
                 item { Spacer(modifier = Modifier.height(24.dp)) }
 
-                // --- Menampilkan Sentimen Publik ---
+                // --- Sentimen Publik ---
                 item {
                     PublicSentiment(
                         voteStats = voteStats,
@@ -158,7 +157,7 @@ fun PolicyScreen(navController: NavController, policyId: String?) {
                 }
                 item { Spacer(modifier = Modifier.height(16.dp)) }
 
-                // --- LIST KOMENTAR DARI DATABASE ---
+                // --- List Komentar ---
                 if (comments.isEmpty()) {
                     item {
                         Box(
@@ -185,31 +184,62 @@ fun PolicyScreen(navController: NavController, policyId: String?) {
     }
 }
 
+// --- FUNGSI FORMAT TANGGAL ---
+fun formatDateTime(isoString: String): String {
+    return try {
+        // 1. Format input dari Appwrite (UTC)
+        val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+        parser.timeZone = TimeZone.getTimeZone("UTC")
+        val date = parser.parse(isoString)
+
+        // 2. Format output yang diinginkan (Lokal Indonesia)
+        val formatter = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID"))
+        formatter.timeZone = TimeZone.getDefault() // Mengikuti jam HP user
+
+        formatter.format(date ?: java.util.Date())
+    } catch (e: Exception) {
+        isoString
+    }
+}
+
 // --- SUB-COMPONENTS ---
 
 @Composable
-fun PolicyHeader(institution: String, date: String, title: String) {
+fun PolicyHeader(institution: String, date: String, title: String, category: String) {
     Column {
+        // 1. KATEGORI (Perbaikan Format Teks)
         Surface(
             color = Color(0xFFE3F2FD),
             shape = RoundedCornerShape(8.dp)
         ) {
+            // PERBAIKAN DI SINI: Tidak pakai .uppercase() lagi
             Text(
-                text = "STATUS: TERBUKA",
+                text = "Kategori: $category",
                 color = Color(0xFF1565C0),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
             )
         }
+
         Spacer(modifier = Modifier.height(12.dp))
-        Text("$institution • ${date.take(10)}", fontSize = 12.sp, color = Color.Gray)
-        Spacer(modifier = Modifier.height(8.dp))
+
+        // 2. JUDUL
         Text(
             text = title,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
-            lineHeight = 30.sp
+            lineHeight = 30.sp,
+            color = Color.Black
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // 3. INSTITUTION & DATE
+        Text(
+            text = "$institution • ${formatDateTime(date)}",
+            fontSize = 12.sp,
+            color = Color.Gray
         )
     }
 }
@@ -335,7 +365,6 @@ fun SentimentCard(
     }
 }
 
-// --- PERBAIKAN 3: ITEM KOMENTAR LEBIH BERSIH ---
 @Composable
 fun CommentItem(comment: PolicyComment) {
     Row {
@@ -373,7 +402,6 @@ fun CommentItem(comment: PolicyComment) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(comment.message, fontSize = 14.sp, color = Color.DarkGray)
 
-            // --- LIKE ICON DIHAPUS, HANYA SISA TOMBOL BALAS ---
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
                 Text("Balas", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A73E8))
             }
@@ -381,7 +409,6 @@ fun CommentItem(comment: PolicyComment) {
     }
 }
 
-// --- INPUT FIELD ---
 @Composable
 fun CommentInputField(
     value: String,
@@ -393,7 +420,7 @@ fun CommentInputField(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding() // Tetap dipakai untuk padding bawah dasar
+                .navigationBarsPadding()
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
