@@ -62,7 +62,9 @@ fun PolicyScreen(navController: NavController, policyId: String?) {
     }
 
     Scaffold(
+        // Mencegah Header tertutup Notch/Status Bar
         contentWindowInsets = WindowInsets.statusBars,
+
         topBar = {
             TopAppBar(
                 title = { Text("Detail Kebijakan", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
@@ -80,8 +82,19 @@ fun PolicyScreen(navController: NavController, policyId: String?) {
             )
         },
         bottomBar = {
-            Box(modifier = Modifier.imePadding()) {
-                CommentInputField(
+            // FIX KEYBOARD SMOOTH: Gunakan Surface sebagai container utama input field
+            // navigationBarsPadding() -> Mencegah tertutup tombol back/home HP
+            // imePadding() -> Membuat input naik otomatis saat keyboard muncul (perlu adjustResize di Manifest)
+            Surface(
+                color = Color.White,
+                shadowElevation = 8.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding() // Jarak aman navigasi bawah
+                    .imePadding() // Jarak aman keyboard
+            ) {
+                // Panggil Input Field (tanpa Surface lagi di dalamnya)
+                CommentInputFieldContent(
                     value = commentText,
                     onValueChange = { viewModel.onCommentTextChanged(it) },
                     onSend = {
@@ -103,16 +116,17 @@ fun PolicyScreen(navController: NavController, policyId: String?) {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .background(Color.White)
-                    .padding(16.dp)
+                    .background(Color.White),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 20.dp) // Tambah padding bawah agar list tidak terpotong
             ) {
                 // --- BAGIAN HEADER ---
+                item { Spacer(modifier = Modifier.height(16.dp)) }
                 item {
                     PolicyHeader(
                         institution = selectedPolicy!!.institution,
                         date = selectedPolicy!!.createdAt,
                         title = selectedPolicy!!.title,
-                        category = selectedPolicy!!.category // Mengambil kategori dari DB
+                        category = selectedPolicy!!.category
                     )
                 }
 
@@ -147,13 +161,7 @@ fun PolicyScreen(navController: NavController, policyId: String?) {
 
                 item { Spacer(modifier = Modifier.height(24.dp)) }
                 item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Komentar Masyarakat (${comments.size})", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    }
+                    Text("Komentar Masyarakat (${comments.size})", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 }
                 item { Spacer(modifier = Modifier.height(16.dp)) }
 
@@ -187,14 +195,12 @@ fun PolicyScreen(navController: NavController, policyId: String?) {
 // --- FUNGSI FORMAT TANGGAL ---
 fun formatDateTime(isoString: String): String {
     return try {
-        // 1. Format input dari Appwrite (UTC)
         val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
         parser.timeZone = TimeZone.getTimeZone("UTC")
         val date = parser.parse(isoString)
 
-        // 2. Format output yang diinginkan (Lokal Indonesia)
         val formatter = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID"))
-        formatter.timeZone = TimeZone.getDefault() // Mengikuti jam HP user
+        formatter.timeZone = TimeZone.getDefault()
 
         formatter.format(date ?: java.util.Date())
     } catch (e: Exception) {
@@ -207,12 +213,11 @@ fun formatDateTime(isoString: String): String {
 @Composable
 fun PolicyHeader(institution: String, date: String, title: String, category: String) {
     Column {
-        // 1. KATEGORI (Perbaikan Format Teks)
+        // 1. KATEGORI (Format Normal: "Kategori: Kesehatan")
         Surface(
             color = Color(0xFFE3F2FD),
             shape = RoundedCornerShape(8.dp)
         ) {
-            // PERBAIKAN DI SINI: Tidak pakai .uppercase() lagi
             Text(
                 text = "Kategori: $category",
                 color = Color(0xFF1565C0),
@@ -409,52 +414,51 @@ fun CommentItem(comment: PolicyComment) {
     }
 }
 
+// --- SUB-COMPONENT INPUT FIELD ---
 @Composable
-fun CommentInputField(
+fun CommentInputFieldContent(
     value: String,
     onValueChange: (String) -> Unit,
     onSend: () -> Unit,
     isSending: Boolean
 ) {
-    Surface(shadowElevation = 8.dp, color = Color.White) {
-        Row(
+    // Tidak perlu Surface lagi di sini, karena sudah dibungkus Surface di bottomBar
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = { Text("Beri tanggapan Anda...", fontSize = 14.sp) },
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(24.dp),
+            enabled = !isSending,
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = Color(0xFFE0E0E0),
+                focusedBorderColor = Color(0xFF1A73E8)
+            ),
+            maxLines = 3
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        IconButton(
+            onClick = onSend,
+            enabled = value.isNotBlank() && !isSending,
             modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(if (value.isNotBlank() && !isSending) Color(0xFF1A73E8) else Color.LightGray)
         ) {
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                placeholder = { Text("Beri tanggapan Anda...", fontSize = 14.sp) },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(24.dp),
-                enabled = !isSending,
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = Color(0xFFE0E0E0),
-                    focusedBorderColor = Color(0xFF1A73E8)
-                ),
-                maxLines = 3
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            IconButton(
-                onClick = onSend,
-                enabled = value.isNotBlank() && !isSending,
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(if (value.isNotBlank() && !isSending) Color(0xFF1A73E8) else Color.LightGray)
-            ) {
-                if (isSending) {
-                    CircularProgressIndicator(
-                        color = Color.White,
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Icon(Icons.Default.Send, contentDescription = "Send", tint = Color.White)
-                }
+            if (isSending) {
+                CircularProgressIndicator(
+                    color = Color.White,
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Icon(Icons.Default.Send, contentDescription = "Send", tint = Color.White)
             }
         }
     }
