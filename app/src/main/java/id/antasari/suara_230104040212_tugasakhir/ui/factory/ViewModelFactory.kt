@@ -9,6 +9,8 @@ import id.antasari.suara_230104040212_tugasakhir.ui.viewmodel.MainViewModel
 import id.antasari.suara_230104040212_tugasakhir.ui.viewmodel.PolicyViewModel
 import id.antasari.suara_230104040212_tugasakhir.ui.viewmodel.RegistrationViewModel
 import id.antasari.suara_230104040212_tugasakhir.ui.viewmodel.SettingViewModel
+// --- IMPORT BARU ---
+import id.antasari.suara_230104040212_tugasakhir.ui.viewmodel.AspirationViewModel
 
 class ViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
@@ -40,6 +42,11 @@ class ViewModelFactory(private val context: Context) : ViewModelProvider.Factory
             // 5. PENTING: Untuk Logout di SettingScreen
             modelClass.isAssignableFrom(SettingViewModel::class.java) -> {
                 SettingViewModel(appwriteService) as T
+            }
+
+            // 6. BARU: Untuk Fitur Aspirasi (Upload & Kirim Data)
+            modelClass.isAssignableFrom(AspirationViewModel::class.java) -> {
+                AspirationViewModel(appwriteService) as T
             }
 
             // Jika ViewModel tidak ditemukan

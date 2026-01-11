@@ -38,6 +38,7 @@ import id.antasari.suara_230104040212_tugasakhir.ui.screen.PolicyScreen
 import id.antasari.suara_230104040212_tugasakhir.ui.screen.SettingsScreen
 import id.antasari.suara_230104040212_tugasakhir.ui.screen.StreamScreen
 import id.antasari.suara_230104040212_tugasakhir.ui.screen.AspirationScreen
+import id.antasari.suara_230104040212_tugasakhir.ui.screen.AspirationFormScreen
 import id.antasari.suara_230104040212_tugasakhir.ui.theme.Suara_230104040212_tugasakhirTheme
 
 class MainActivity : ComponentActivity() {
@@ -163,6 +164,10 @@ fun SuaraApp() {
             composable(Screen.Notification.route) {
                 // Uncomment jika NotificationScreen sudah siap
                 // NotificationScreen(navController)
+            }
+
+            composable(Screen.AspirationForm.route) {
+                AspirationFormScreen(navController = navController)
             }
         }
     }

@@ -13,24 +13,22 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
-import id.antasari.suara_230104040212_tugasakhir.ui.theme.Suara_230104040212_tugasakhirTheme
+import id.antasari.suara_230104040212_tugasakhir.navigation.Screen
+import id.antasari.suara_230104040212_tugasakhir.ui.factory.ViewModelFactory
+import id.antasari.suara_230104040212_tugasakhir.ui.viewmodel.AspirationViewModel
+import id.antasari.suara_230104040212_tugasakhir.ui.viewmodel.AspirationModel // Pastikan import ini ada
+import java.text.SimpleDateFormat // Import untuk format tanggal kompatibel
+import java.util.Locale // Import Locale
 
-data class AspirationItem(
-    val id: String,
-    val title: String,
-    val time: String,
-    val status: String
-)
-
+// Data Class StatusInfo (Untuk Warna Chip)
 data class StatusInfo(
     val backgroundColor: Color,
     val textColor: Color,
@@ -41,23 +39,33 @@ data class StatusInfo(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AspirationScreen(navController: NavController) {
-    val sampleAspirations = remember {
-        listOf(
-            AspirationItem("#LP-8805", "Lampu Penerangan Jalan Mati di Sektor 9", "1 day ago", "Diproses"),
-            AspirationItem("#LP-8750", "Permintaan Tong Sampah Umum Taman Kota", "1 week ago", "Selesai"),
-            AspirationItem("#LP-8642", "Pemangkasan Pohon Rawan Tumbang", "2 weeks ago", "Selesai")
-        )
+    val context = LocalContext.current
+
+    // 1. Inisialisasi ViewModel
+    val viewModel: AspirationViewModel = viewModel(factory = ViewModelFactory(context))
+
+    // 2. Ambil Data List dari ViewModel
+    val aspirations by viewModel.aspirationList.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    // 3. Panggil Fetch Saat Layar Dibuka
+    LaunchedEffect(Unit) {
+        viewModel.fetchAspirations()
     }
 
     var searchText by remember { mutableStateOf("") }
-    val filters = listOf("Semua", "Diproses", "Selesai")
+    val filters = listOf("Semua", "pending", "Diproses", "Selesai")
     var selectedFilter by remember { mutableStateOf("Semua") }
 
     Scaffold(
         topBar = { AspirationTopAppBar() },
         bottomBar = { BottomNavigationBar(navController = navController) },
         floatingActionButton = {
-            FloatingActionButton(onClick = { navController.navigate("aspiration_form") }) {
+            FloatingActionButton(
+                onClick = { navController.navigate(Screen.AspirationForm.route) },
+                containerColor = Color(0xFF1C74E9),
+                contentColor = Color.White
+            ) {
                 Icon(Icons.Filled.Add, contentDescription = "Add Aspiration")
             }
         },
@@ -74,14 +82,14 @@ fun AspirationScreen(navController: NavController) {
                     value = searchText,
                     onValueChange = { searchText = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Cari laporan saya...") },
+                    placeholder = { Text("Cari laporan...") },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     shape = RoundedCornerShape(24.dp),
                     colors = TextFieldDefaults.colors(
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         disabledIndicatorColor = Color.Transparent,
-                        cursorColor = MaterialTheme.colorScheme.primary,
+                        cursorColor = Color(0xFF1C74E9),
                         focusedContainerColor = Color.White,
                         unfocusedContainerColor = Color.White,
                         disabledContainerColor = Color.White,
@@ -96,27 +104,48 @@ fun AspirationScreen(navController: NavController) {
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(filters) { filter ->
+                        val isSelected = selectedFilter == filter
+                        val displayText = if (filter == "pending") "Menunggu" else filter
+
                         Button(
                             onClick = { selectedFilter = filter },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (selectedFilter == filter) MaterialTheme.colorScheme.primary else Color.White,
-                                contentColor = if (selectedFilter == filter) Color.White else Color.Black
+                                containerColor = if (isSelected) Color(0xFF1C74E9) else Color.White,
+                                contentColor = if (isSelected) Color.White else Color.Black
                             ),
-                            shape = RoundedCornerShape(20.dp)
+                            shape = RoundedCornerShape(20.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = if(isSelected) 2.dp else 0.dp)
                         ) {
-                            Text(filter)
+                            Text(displayText, fontSize = 13.sp)
                         }
                     }
                 }
 
                 Spacer(Modifier.height(16.dp))
 
-                // Aspiration List
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    items(sampleAspirations.filter {
-                        selectedFilter == "Semua" || it.status == selectedFilter
-                    }) { aspiration ->
-                        AspirationCard(aspiration = aspiration)
+                // Loading Indicator
+                if (isLoading) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                } else if (aspirations.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Belum ada aspirasi.", color = Color.Gray)
+                    }
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        val filteredList = aspirations.filter { item ->
+                            val matchesFilter = selectedFilter == "Semua" || item.status == selectedFilter
+                            val matchesSearch = item.title.contains(searchText, ignoreCase = true)
+                            matchesFilter && matchesSearch
+                        }
+
+                        items(filteredList) { aspiration ->
+                            AspirationCard(aspiration = aspiration)
+                        }
+
+                        item { Spacer(modifier = Modifier.height(80.dp)) }
                     }
                 }
             }
@@ -131,34 +160,35 @@ fun AspirationTopAppBar() {
         modifier = Modifier.statusBarsPadding(),
         title = {
             Text(
-                "Aspirasi",
+                "Aspirasi Saya",
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp,
-                color = MaterialTheme.colorScheme.onSurface
+                color = Color.Black
             )
         },
         actions = {
             IconButton(onClick = { /*TODO*/ }) {
                 Icon(
-                    imageVector = Icons.Default.Notifications,
-                    contentDescription = "Notifications"
+                    imageVector = Icons.Default.NotificationsNone,
+                    contentDescription = "Notifications",
+                    tint = Color.Gray
                 )
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = Color.White
         )
     )
 }
 
 @Composable
-fun AspirationCard(aspiration: AspirationItem) {
+fun AspirationCard(aspiration: AspirationModel) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        onClick = { /* TODO: Handle card click */ }
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        onClick = { /* TODO: Detail */ }
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -170,8 +200,10 @@ fun AspirationCard(aspiration: AspirationItem) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(aspiration.id, color = Color.Gray, fontSize = 12.sp)
-                    Text(aspiration.time, color = Color.Gray, fontSize = 12.sp)
+                    val shortId = if (aspiration.id.length > 5) "#${aspiration.id.takeLast(5).uppercase()}" else "#${aspiration.id}"
+                    Text(shortId, color = Color.Gray, fontSize = 12.sp)
+
+                    Text(formatDate(aspiration.createdAt), color = Color.Gray, fontSize = 12.sp)
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(aspiration.title, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 2)
@@ -193,8 +225,11 @@ fun StatusChip(status: String) {
     val statusInfo = when (status) {
         "Diproses" -> StatusInfo(Color(0xFFEFF6FF), Color(0xFF3B82F6), Icons.Default.Refresh, false)
         "Selesai" -> StatusInfo(Color(0xFFF0FDF4), Color(0xFF16A34A), Icons.Default.CheckCircle, false)
+        "pending" -> StatusInfo(Color(0xFFFFF7ED), Color(0xFFEA580C), Icons.Default.HourglassEmpty, false)
         else -> StatusInfo(Color.LightGray, Color.Black, null, false)
     }
+
+    val displayStatus = if (status == "pending") "Menunggu" else status
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -213,15 +248,25 @@ fun StatusChip(status: String) {
             )
         }
         Spacer(modifier = Modifier.width(6.dp))
-        Text(text = status, color = statusInfo.textColor, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+        Text(text = displayStatus, color = statusInfo.textColor, fontSize = 12.sp, fontWeight = FontWeight.Medium)
     }
 }
 
+// --- PERBAIKAN DI SINI: Menggunakan SimpleDateFormat yang Kompatibel API 24 ---
+fun formatDate(dateString: String): String {
+    return try {
+        // Ambil 10 karakter pertama (YYYY-MM-DD) agar aman diparsing
+        // Contoh data Appwrite: 2026-01-12T01:00:00.000+00:00
+        val simpleDatePart = if (dateString.length >= 10) dateString.substring(0, 10) else dateString
 
-@Preview(showBackground = true)
-@Composable
-fun AspirationScreenPreview() {
-    Suara_230104040212_tugasakhirTheme {
-        AspirationScreen(rememberNavController())
+        // Format Input: yyyy-MM-dd
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val date = inputFormat.parse(simpleDatePart) ?: return "Baru saja"
+
+        // Format Output: 12 Jan 2026 (Bahasa Indonesia)
+        val outputFormat = SimpleDateFormat("dd MMM yyyy", Locale("id", "ID"))
+        outputFormat.format(date)
+    } catch (e: Exception) {
+        "Baru saja"
     }
 }
