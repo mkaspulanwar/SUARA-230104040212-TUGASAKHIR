@@ -6,6 +6,9 @@ import androidx.lifecycle.viewModelScope
 import id.antasari.suara_230104040212_tugasakhir.data.model.PolicyComment
 import id.antasari.suara_230104040212_tugasakhir.data.model.PolicyModel
 import id.antasari.suara_230104040212_tugasakhir.data.remote.AppwriteService
+import kotlinx.coroutines.async // Import Penting untuk Parallel
+import kotlinx.coroutines.awaitAll // Import Penting untuk Parallel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,56 +20,57 @@ class PolicyViewModel(private val service: AppwriteService) : ViewModel() {
     // BAGIAN 1: LIST KEBIJAKAN (Home Screen)
     // ==========================================
 
-    // List yang ditampilkan di UI (bisa berubah karena filter)
     val policies = mutableStateListOf<PolicyModel>()
-
-    // List kategori untuk Filter Section (Dinamis)
     val categoryList = mutableStateListOf("Semua", "Trending")
 
-    // Cache internal: Menyimpan SEMUA data asli dari server
+    // Cache internal agar filter tidak perlu fetch ulang
     private var allPoliciesCache = listOf<PolicyModel>()
 
     /**
-     * Mengambil daftar kebijakan, melengkapinya dengan statistik,
-     * dan menyiapkan kategori filter.
+     * OPTIMIZED FETCH: Mengambil data secara PARALEL (Async)
+     * Ini membuat loading jauh lebih cepat karena tidak antri satu per satu.
      */
     fun fetchPolicies() {
         viewModelScope.launch {
             try {
-                // 1. Ambil List Kebijakan Dasar dari Appwrite
+                // 1. Ambil List Dasar (Cepat)
                 val rawList = service.getAllPolicies()
 
-                // 2. Loop setiap kebijakan untuk mengambil data statistik (Enrichment)
+                // 2. PARALLEL ENRICHMENT
+                // Kita proses semua kebijakan secara bersamaan menggunakan 'map' dan 'async'
                 val enrichedList = rawList.map { policy ->
-                    // A. Ambil Data Vote
-                    val votes = service.getVotesByPolicy(policy.id)
-                    val totalV = votes.size
-                    val agreeCount = votes.count {
-                        val status = it["status"].toString().lowercase()
-                        status == "setuju" || status == "agree"
+                    async {
+                        // Di dalam sini, ambil vote dan komentar secara bersamaan juga
+                        val votesDeferred = async { service.getVotesByPolicy(policy.id) }
+                        val commentsDeferred = async { service.getComments(policy.id) }
+
+                        // Tunggu keduanya selesai (paralel)
+                        val votes = votesDeferred.await()
+                        val comments = commentsDeferred.await()
+
+                        // Hitung Statistik
+                        val totalV = votes.size
+                        val agreeCount = votes.count {
+                            val status = it["status"].toString().lowercase()
+                            status == "setuju" || status == "agree"
+                        }
+                        val percent = if (totalV > 0) ((agreeCount.toDouble() / totalV) * 100).toInt() else 0
+                        val totalC = comments.size
+
+                        // Update object policy
+                        policy.apply {
+                            this.totalVotes = totalV
+                            this.agreePercentage = percent
+                            this.totalComments = totalC
+                        }
+                        policy // Return policy yang sudah lengkap
                     }
-                    val percent = if (totalV > 0) {
-                        ((agreeCount.toDouble() / totalV) * 100).toInt()
-                    } else { 0 }
+                }.awaitAll() // Tunggu semua proses paralel selesai
 
-                    // B. Ambil Data Komentar
-                    val comments = service.getComments(policy.id)
-                    val totalC = comments.size
-
-                    // C. Update object PolicyModel
-                    policy.apply {
-                        this.totalVotes = totalV
-                        this.agreePercentage = percent
-                        this.totalComments = totalC
-                    }
-                }
-
-                // 3. Simpan ke Cache Master & Update UI
+                // 3. Update UI Sekaligus
                 allPoliciesCache = enrichedList
                 policies.clear()
                 policies.addAll(allPoliciesCache)
-
-                // 4. Update Kategori Filter secara Dinamis
                 updateCategories(enrichedList)
 
             } catch (e: Exception) {
@@ -75,43 +79,20 @@ class PolicyViewModel(private val service: AppwriteService) : ViewModel() {
         }
     }
 
-    /**
-     * Membuat daftar kategori unik dari data yang ada di database
-     */
     private fun updateCategories(list: List<PolicyModel>) {
-        val dbCategories = list.map { it.category }
-            .distinct() // Hapus duplikat
-            .sorted()   // Urutkan Abjad
-
+        val dbCategories = list.map { it.category }.distinct().sorted()
         categoryList.clear()
         categoryList.add("Semua")
         categoryList.add("Trending")
         categoryList.addAll(dbCategories)
     }
 
-    /**
-     * LOGIKA FILTERING & SORTING
-     * Dipanggil saat user mengklik chip kategori di HomeScreen
-     */
     fun filterPolicies(category: String) {
         val filteredList = when (category) {
-            "Semua" -> {
-                // Tampilkan semua data asli (urutan default/terbaru)
-                allPoliciesCache
-            }
-            "Trending" -> {
-                // Urutkan berdasarkan popularitas (Vote + Komen terbanyak)
-                allPoliciesCache.sortedByDescending { it.totalVotes + it.totalComments }
-            }
-            else -> {
-                // Filter berdasarkan kesamaan nama kategori (case insensitive)
-                allPoliciesCache.filter {
-                    it.category.equals(category, ignoreCase = true)
-                }
-            }
+            "Semua" -> allPoliciesCache
+            "Trending" -> allPoliciesCache.sortedByDescending { it.totalVotes + it.totalComments }
+            else -> allPoliciesCache.filter { it.category.equals(category, ignoreCase = true) }
         }
-
-        // Update list yang ditampilkan di UI
         policies.clear()
         policies.addAll(filteredList)
     }
@@ -157,24 +138,38 @@ class PolicyViewModel(private val service: AppwriteService) : ViewModel() {
     val isPostingComment: StateFlow<Boolean> = _isPostingComment.asStateFlow()
 
     // ==========================================
-    // LOGIC UTAMA (Detail Screen)
+    // LOGIC UTAMA (Detail Screen - OPTIMIZED)
     // ==========================================
 
     fun loadPolicyDetail(policyId: String) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                if (currentUserId == null) {
-                    currentUserId = service.getCurrentUserId()
-                }
-                currentUserName = service.getCurrentUserName()
+                // OPTIMASI: Gunakan coroutineScope untuk memuat data secara paralel
+                coroutineScope {
+                    // 1. Job ambil User Info (jalan background)
+                    val userJob = launch {
+                        if (currentUserId == null) {
+                            currentUserId = service.getCurrentUserId()
+                        }
+                        currentUserName = service.getCurrentUserName()
+                    }
 
-                val policy = service.getPolicyById(policyId)
-                _selectedPolicy.value = policy
+                    // 2. Job ambil Detail Kebijakan (jalan background)
+                    val policyDeferred = async { service.getPolicyById(policyId) }
 
-                if (policy != null) {
-                    refreshVoteData(policyId)
-                    loadComments(policyId)
+                    // Tunggu kebijakan selesai diload
+                    val policy = policyDeferred.await()
+                    _selectedPolicy.value = policy
+
+                    // Pastikan user info juga sudah selesai sebelum lanjut
+                    userJob.join()
+
+                    // 3. Jika kebijakan ada, load Vote & Comment secara PARALEL juga
+                    if (policy != null) {
+                        launch { refreshVoteData(policyId) }
+                        launch { loadComments(policyId) }
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -183,6 +178,8 @@ class PolicyViewModel(private val service: AppwriteService) : ViewModel() {
             }
         }
     }
+
+    // --- LOGIC VOTING (Tetap Sama) ---
 
     private suspend fun refreshVoteData(policyId: String) {
         val votesList = service.getVotesByPolicy(policyId)
@@ -222,6 +219,8 @@ class PolicyViewModel(private val service: AppwriteService) : ViewModel() {
             if (success) refreshVoteData(policyId)
         }
     }
+
+    // --- LOGIC KOMENTAR (Tetap Sama) ---
 
     fun loadComments(policyId: String) {
         viewModelScope.launch {

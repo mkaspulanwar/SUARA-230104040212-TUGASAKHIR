@@ -107,7 +107,7 @@ class RegistrationViewModel(private val appwriteService: AppwriteService) : View
             _isSuccess.value = false
 
             try {
-                // LANGKAH PENTING: Bersihkan sesi lama jika ada untuk menghindari error "session is active"
+                // LANGKAH PENTING: Bersihkan sesi lama jika ada (Safety)
                 try {
                     appwriteService.account.deleteSession(sessionId = "current")
                 } catch (e: Exception) {
@@ -122,7 +122,7 @@ class RegistrationViewModel(private val appwriteService: AppwriteService) : View
                     name = _nama.value
                 )
 
-                // 2. Login untuk mendapatkan sesi aktif (diperlukan untuk menulis ke database)
+                // 2. Login SEMENTARA untuk mendapatkan sesi aktif (diperlukan untuk menulis ke database)
                 appwriteService.account.createEmailPasswordSession(
                     email = _email.value,
                     password = _password.value
@@ -144,8 +144,17 @@ class RegistrationViewModel(private val appwriteService: AppwriteService) : View
                     )
                 )
 
-                _successMessage.value = "Akun berhasil dibuat"
+                // --- LANGKAH 4 (BARU): LOGOUT ---
+                // Kita hapus sesi lagi agar user harus login manual di layar Login
+                try {
+                    appwriteService.account.deleteSession(sessionId = "current")
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
+                _successMessage.value = "Akun berhasil dibuat. Silakan Login."
                 _isSuccess.value = true
+
             } catch (e: AppwriteException) {
                 _errorMessage.value = "Gagal: ${e.message}"
             } finally {
@@ -157,5 +166,6 @@ class RegistrationViewModel(private val appwriteService: AppwriteService) : View
     fun onMessagesShown() {
         _errorMessage.value = null
         _successMessage.value = null
+        _isSuccess.value = false // Reset status success juga
     }
-}   
+}
