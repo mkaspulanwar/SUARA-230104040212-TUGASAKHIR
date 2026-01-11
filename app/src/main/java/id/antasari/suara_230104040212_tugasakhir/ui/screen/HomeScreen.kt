@@ -1,6 +1,6 @@
 package id.antasari.suara_230104040212_tugasakhir.ui.screen
 
-import androidx.compose.foundation.BorderStroke // <-- INI YANG KURANG TADI
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -80,6 +80,7 @@ fun HomeScreen(navController: NavController) {
         factory = ViewModelFactory(context)
     )
 
+    // Load data saat pertama kali dibuka
     LaunchedEffect(Unit) {
         viewModel.fetchPolicies()
     }
@@ -122,7 +123,15 @@ fun HomeScreen(navController: NavController) {
                             containerColor = BackgroundWhite
                         )
                     )
-                    FilterSection()
+
+                    // --- UPDATE: FilterSection Terhubung ke ViewModel ---
+                    FilterSection(
+                        categories = viewModel.categoryList, // List Dinamis
+                        onCategorySelected = { category ->
+                            viewModel.filterPolicies(category) // Logic Filter
+                        }
+                    )
+                    // ---------------------------------------------------
                 }
             }
         },
@@ -130,9 +139,19 @@ fun HomeScreen(navController: NavController) {
             BottomNavigationBar(navController = navController)
         }
     ) { paddingValues ->
+        // Tampilkan Loading atau Data
         if (viewModel.policies.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = PrimaryBlue)
+            // Kita bisa tambahkan cek: kalau categoryList kosong berarti memang loading awal
+            // Kalau categoryList ada tapi policies kosong, berarti hasil filter tidak ditemukan
+            if (viewModel.categoryList.size <= 2) { // Asumsi cuma "Semua" & "Trending" (belum load DB)
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = PrimaryBlue)
+                }
+            } else {
+                // Data kosong setelah filter (Opsional: Tampilkan pesan "Data tidak ditemukan")
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Belum ada kebijakan di kategori ini.", color = Color.Gray)
+                }
             }
         } else {
             LazyColumn(
@@ -245,13 +264,14 @@ fun NewsCard(policy: PolicyModel, onClick: () -> Unit) {
     }
 }
 
-// --- FILTER SECTION (OUTLINE STYLE) ---
+// --- FILTER SECTION TERHUBUNG ---
 @Composable
-fun FilterSection() {
-    val categories = listOf("Semua", "Pendidikan", "Kesehatan", "Ekonomi", "Lingkungan", "Infrastruktur")
-    var selected by remember { mutableStateOf(0) }
-
-    val unselectedBorderColor = Color(0xFFE0E0E0) // Warna border abu-abu
+fun FilterSection(
+    categories: List<String>, // Data dari ViewModel
+    onCategorySelected: (String) -> Unit // Callback ke ViewModel
+) {
+    var selectedIndex by remember { mutableStateOf(0) }
+    val unselectedBorderColor = Color(0xFFE0E0E0)
 
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -259,7 +279,7 @@ fun FilterSection() {
         modifier = Modifier.fillMaxWidth().background(BackgroundWhite)
     ) {
         itemsIndexed(categories) { index, title ->
-            val isSelected = selected == index
+            val isSelected = selectedIndex == index
 
             val borderColor = if (isSelected) PrimaryBlue else unselectedBorderColor
             val textColor = if (isSelected) PrimaryBlue else Color.Gray
@@ -268,10 +288,14 @@ fun FilterSection() {
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
                     .border(
-                        BorderStroke(1.dp, borderColor), // Outline biru atau abu
+                        BorderStroke(1.dp, borderColor),
                         shape = RoundedCornerShape(8.dp)
                     )
-                    .clickable { selected = index }
+                    // Background transparan
+                    .clickable {
+                        selectedIndex = index
+                        onCategorySelected(title) // Panggil Logic Filter
+                    }
                     .padding(horizontal = 16.dp, vertical = 6.dp)
             ) {
                 Text(
