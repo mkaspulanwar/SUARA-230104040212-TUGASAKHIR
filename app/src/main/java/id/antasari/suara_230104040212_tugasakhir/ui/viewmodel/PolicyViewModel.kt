@@ -3,15 +3,19 @@ package id.antasari.suara_230104040212_tugasakhir.ui.viewmodel
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import id.antasari.suara_230104040212_tugasakhir.data.model.PolicyComment
 import id.antasari.suara_230104040212_tugasakhir.data.model.PolicyModel
 import id.antasari.suara_230104040212_tugasakhir.data.remote.AppwriteService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class PolicyViewModel(private val service: AppwriteService) : ViewModel() {
 
-    // --- BAGIAN 1: LIST KEBIJAKAN (Tetap sama) ---
+    // ==========================================
+    // BAGIAN 1: LIST KEBIJAKAN (Home Screen)
+    // ==========================================
     val policies = mutableStateListOf<PolicyModel>()
 
     fun fetchPolicies() {
@@ -26,7 +30,9 @@ class PolicyViewModel(private val service: AppwriteService) : ViewModel() {
         }
     }
 
-    // --- BAGIAN 2: DETAIL & INTERACTIVE VOTING ---
+    // ==========================================
+    // BAGIAN 2: DETAIL & VOTING
+    // ==========================================
 
     // State untuk menampung Detail Kebijakan
     private val _selectedPolicy = MutableStateFlow<PolicyModel?>(null)
@@ -36,11 +42,11 @@ class PolicyViewModel(private val service: AppwriteService) : ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    // UPDATE: Data Class sekarang menampung detail jumlah suara (Count)
+    // Data Class Vote Stats
     data class VoteStats(
         val totalVotes: Int = 0,
-        val agreeCount: Int = 0,      // Tambahan: Jumlah spesifik yang setuju
-        val disagreeCount: Int = 0,   // Tambahan: Jumlah spesifik yang tidak setuju
+        val agreeCount: Int = 0,
+        val disagreeCount: Int = 0,
         val agreePercentage: Int = 0,
         val disagreePercentage: Int = 0
     )
@@ -53,26 +59,56 @@ class PolicyViewModel(private val service: AppwriteService) : ViewModel() {
     private val _currentUserVote = MutableStateFlow<String?>(null)
     val currentUserVote: StateFlow<String?> = _currentUserVote
 
-    // Variable internal untuk menyimpan ID User yang login
+    // Variable internal untuk menyimpan ID User yang login (untuk Voting)
     private var currentUserId: String? = null
 
+    // Variable internal untuk menyimpan Nama User (untuk Komentar)
+    private var currentUserName: String = "Warga Antasari"
+
+    // ==========================================
+    // BAGIAN 3: KOMENTAR
+    // ==========================================
+
+    // State List Komentar
+    private val _comments = MutableStateFlow<List<PolicyComment>>(emptyList())
+    val comments: StateFlow<List<PolicyComment>> = _comments.asStateFlow()
+
+    // State Input Text Komentar
+    private val _commentText = MutableStateFlow("")
+    val commentText: StateFlow<String> = _commentText.asStateFlow()
+
+    // State Loading saat mengirim komentar
+    private val _isPostingComment = MutableStateFlow(false)
+    val isPostingComment: StateFlow<Boolean> = _isPostingComment.asStateFlow()
+
+    // ==========================================
+    // LOGIC UTAMA
+    // ==========================================
+
     /**
-     * Fungsi Utama: Mengambil detail kebijakan, ID user, dan status vote
+     * Fungsi Utama: Mengambil detail kebijakan, ID user, Nama user, status vote, DAN komentar.
      */
     fun loadPolicyDetail(policyId: String) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                // 1. Ambil User ID dulu
-                currentUserId = service.getCurrentUserId()
+                // 1. Ambil User ID (Untuk keperluan pengecekan Vote)
+                if (currentUserId == null) {
+                    currentUserId = service.getCurrentUserId()
+                }
 
-                // 2. Ambil Detail Kebijakan
+                // 2. PERBAIKAN: Ambil Nama User Asli (Menggunakan Email)
+                // Panggil fungsi service yang baru kita update
+                currentUserName = service.getCurrentUserName()
+
+                // 3. Ambil Detail Kebijakan
                 val policy = service.getPolicyById(policyId)
                 _selectedPolicy.value = policy
 
-                // 3. Jika kebijakan ada, hitung statistik
+                // 4. Jika kebijakan ada, load data pendukung (Vote & Komentar)
                 if (policy != null) {
                     refreshVoteData(policyId)
+                    loadComments(policyId)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -82,30 +118,21 @@ class PolicyViewModel(private val service: AppwriteService) : ViewModel() {
         }
     }
 
-    /**
-     * Fungsi untuk menghitung ulang statistik dan mengecek pilihan user.
-     */
+    // --- LOGIC VOTING ---
+
     private suspend fun refreshVoteData(policyId: String) {
-        // Ambil semua data vote untuk kebijakan ini
         val votesList = service.getVotesByPolicy(policyId)
         val total = votesList.size
 
-        // A. Hitung Statistik Global
         if (total > 0) {
-            // Hitung yang setuju
             val agreeCount = votesList.count {
                 val status = it["status"].toString().lowercase()
                 status == "setuju" || status == "agree"
             }
-
-            // Sisanya adalah tidak setuju
             val disagreeCount = total - agreeCount
-
-            // Hitung Persentase
             val agreePercent = ((agreeCount.toDouble() / total) * 100).toInt()
             val disagreePercent = ((disagreeCount.toDouble() / total) * 100).toInt()
 
-            // Update State dengan data lengkap (Total, Count, & Percentage)
             _voteStats.value = VoteStats(
                 totalVotes = total,
                 agreeCount = agreeCount,
@@ -114,38 +141,67 @@ class PolicyViewModel(private val service: AppwriteService) : ViewModel() {
                 disagreePercentage = disagreePercent
             )
         } else {
-            // Jika belum ada vote, semua nol
             _voteStats.value = VoteStats()
         }
 
-        // B. Cek Pilihan User Saat Ini (Agar tombol bisa menyala)
         if (currentUserId != null) {
             val myVote = votesList.find { it["user_id"] == currentUserId }
-            if (myVote != null) {
-                _currentUserVote.value = myVote["status"].toString().lowercase()
-            } else {
-                _currentUserVote.value = null
-            }
+            _currentUserVote.value = myVote?.get("status")?.toString()?.lowercase()
+        }
+    }
+
+    fun castVote(policyId: String, status: String) {
+        viewModelScope.launch {
+            if (currentUserId == null) return@launch
+            _currentUserVote.value = status // Optimistic update
+            val success = service.submitVote(policyId, currentUserId!!, status)
+            if (success) refreshVoteData(policyId)
+        }
+    }
+
+    // --- LOGIC KOMENTAR ---
+
+    /**
+     * Mengambil daftar komentar dari database
+     */
+    fun loadComments(policyId: String) {
+        viewModelScope.launch {
+            val result = service.getComments(policyId)
+            _comments.value = result
         }
     }
 
     /**
-     * Fungsi yang dipanggil saat user mengklik tombol Vote
+     * Mengupdate state text field saat user mengetik
      */
-    fun castVote(policyId: String, status: String) {
+    fun onCommentTextChanged(text: String) {
+        _commentText.value = text
+    }
+
+    /**
+     * Mengirim komentar ke database
+     */
+    fun sendComment(policyId: String) {
+        val message = _commentText.value
+        if (message.isBlank()) return
+
+        // Mencegah user mengirim jika belum login atau sedang loading
         viewModelScope.launch {
-            if (currentUserId == null) return@launch
+            _isPostingComment.value = true
 
-            // 1. Optimistic Update (Ubah UI instan)
-            _currentUserVote.value = status
+            // Gunakan ID dan Nama yang sudah di-fetch di awal (saat loadPolicyDetail)
+            val userIdToSend = currentUserId ?: "guest_user"
 
-            // 2. Kirim ke Server
-            val success = service.submitVote(policyId, currentUserId!!, status)
+            // Nama diambil dari variable yang sudah diset oleh getCurrentUserName()
+            val userNameToSend = currentUserName
 
-            // 3. Refresh data statistik jika sukses
+            val success = service.addComment(policyId, message, userIdToSend, userNameToSend)
+
             if (success) {
-                refreshVoteData(policyId)
+                _commentText.value = "" // Reset input
+                loadComments(policyId)  // Refresh list komentar agar muncul yang baru
             }
+            _isPostingComment.value = false
         }
     }
 }
